@@ -1,0 +1,41 @@
+# Dependency directories
+node_modules/
+/client/dist/
+/client/dist/*
+client/dist/index.html
+dist/
+server/quanttrade.db
+credentials.txt
+
+# Python cache & virtual environments
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+server/venv/
+backend/venv/
+.venv/
+env/
+.pytest_cache/
+
+# Databases & local state
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Environment & local secret files
+backend/.env
+*.pem
+*.key
+
+# IDEs & system temporary files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+~$*.docx
+~$*.xlsx
+~$*.docx
+Security_issue.docx
+backend/app/__pycache__/
