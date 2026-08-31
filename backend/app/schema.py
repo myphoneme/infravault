@@ -10,8 +10,43 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password : str
 
-class UserResponse(UserBase):
-    id : int
+class UserResponse(BaseModel):
+    id: int
+    name: str
+    email: str
+    role: str
+    is_active: bool
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+    created_by: int | None = None
+    updated_by: int | None = None
+
+    class Config:
+        from_attributes = True
+
+class PaginationResponse(BaseModel):
+    page: int
+    limit: int
+    total: int
+    total_pages: int
+    has_next: bool
+    has_previous: bool
+
+
+class UserListResponse(BaseModel):
+    data: list[UserResponse]
+    pagination: PaginationResponse
+
+class UserStatusUpdate(BaseModel):
+    is_active: bool
+
+class ProfileUpdate(BaseModel):
+    name: str
+    email: str
+
+class ChangePassword(BaseModel):
+    current_password: str
+    new_password: str
 
     class Config:
         from_attributes = True
@@ -40,6 +75,36 @@ class DeviceResponse(DeviceBase):
 
     class Config:
         from_attributes = True
+
+class DeviceListResponse(BaseModel):
+    id: int
+    device_name: str
+    host: str
+    port: int
+    connection_type: str
+    username: str
+    comments: str | None = None
+    device_status: str
+    created_at: datetime
+    updated_at: datetime
+    created_by: int | None = None
+    updated_by: int | None = None
+
+    class Config:
+        from_attributes = True
+
+class DevicePagination(BaseModel):
+    page: int
+    limit: int
+    total: int
+    total_pages: int
+    has_next: bool
+    has_previous: bool
+
+
+class DeviceListResponseWrapper(BaseModel):
+    data: list[DeviceListResponse]
+    pagination: DevicePagination
 
 
 class ProjectBase(BaseModel):

@@ -1,6 +1,6 @@
 from app.database import Base
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import String, Integer,Text, DateTime,Date, ForeignKey
+from sqlalchemy import String, Integer,Text, DateTime,Date, ForeignKey, Boolean
 from datetime import datetime,date
 
 
@@ -8,12 +8,61 @@ from datetime import datetime,date
 class User(Base):
     __tablename__ = "users"
 
-    id:Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    name: Mapped[str] = mapped_column(String(50), nullable= False)
-    email : Mapped[str] = mapped_column(String(50), unique= True, nullable= False)
-    password : Mapped[str] = mapped_column(String(250), nullable= False)
-    role : Mapped[str] = mapped_column(String(50), nullable= False)
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
 
+    name: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False
+    )
+
+    email: Mapped[str] = mapped_column(
+        String(50),
+        unique=True,
+        nullable=False
+    )
+
+    password: Mapped[str] = mapped_column(
+        String(250),
+        nullable=False
+    )
+
+    role: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False
+    )
+
+    is_active: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True,
+        nullable=False
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
+
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False
+    )
+
+    created_by: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True
+    )
+
+    updated_by: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True
+    )
 
 
 class Device(Base):
@@ -175,4 +224,46 @@ class Project(Base):
     updated_by: Mapped[int | None] = mapped_column(
         Integer,
         nullable=True
+    )
+
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    user_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=True
+    )
+
+    action: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False
+    )
+
+    resource: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False
+    )
+
+    resource_id: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True
+    )
+
+    description: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow,
+        nullable=False
     )
