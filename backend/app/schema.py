@@ -10,6 +10,12 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password : str
 
+class UserUpdate(BaseModel):
+    name: str
+    email: str
+    role: str
+    password: str | None = None
+
 class UserResponse(BaseModel):
     id: int
     name: str

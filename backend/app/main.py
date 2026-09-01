@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException
 from app.database import Base, engine, get_db
 from app.model import User, Device , Project, AuditLog
-from app.schema import UserCreate, UserResponse,UserListResponse, UserStatusUpdate,ProfileUpdate,ChangePassword, DeviceCreate , DeviceResponse,DeviceListResponse,DeviceListResponseWrapper, ProjectCreate, ProjectResponse, ProjectUpdate, ProjectStatusUpdate
+from app.schema import UserCreate, UserResponse,UserListResponse,UserUpdate, UserStatusUpdate,ProfileUpdate,ChangePassword, DeviceCreate , DeviceResponse,DeviceListResponse,DeviceListResponseWrapper, ProjectCreate, ProjectResponse, ProjectUpdate, ProjectStatusUpdate
 from sqlalchemy.orm import Session
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -37,20 +37,37 @@ def read_root():
     return {"message": "Hello from FastAPI !!"}
 
 @app.post("/users/")
-def create_user(userdata : UserCreate, db: Session = Depends(get_db), current_user: dict = Depends(
-        require_roles("ADMIN", "SUPER_ADMIN"))):
-    new_user = User(
-        name = userdata.name,
-        email = userdata.email,
-        password = hash_password(userdata.password),
-        role = userdata.role,
-        created_by = current_user["user_id"],
-        updated_by = current_user["user_id"],    
+def create_user(
+    userdata: UserCreate,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(
+        require_roles("ADMIN", "SUPER_ADMIN")
     )
+):
+    if (
+        current_user["role"] == "ADMIN"
+        and userdata.role == "SUPER_ADMIN"
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="ADMIN cannot create a SUPER_ADMIN"
+        )
+
+    new_user = User(
+        name=userdata.name,
+        email=userdata.email,
+        password=hash_password(userdata.password),
+        role=userdata.role,
+        created_by=current_user["user_id"],
+        updated_by=current_user["user_id"],
+    )
+
     db.add(new_user)
     db.commit()
-    # db.refresh(new_user)
-    return {"message": "User created successfully"}
+
+    return {
+        "message": "User created successfully"
+    }
 
 @app.get("/users/", response_model=UserListResponse)
 def get_users(
@@ -129,13 +146,30 @@ def get_users(
     }
 
 @app.put("/users/{user_id}")
-def update_user(user_id : int, userdata : UserCreate, db: Session = Depends(get_db), current_user: dict = Depends(require_roles("ADMIN","SUPER_ADMIN"))):
+def update_user(user_id : int, userdata : UserUpdate, db: Session = Depends(get_db), current_user: dict = Depends(require_roles("ADMIN","SUPER_ADMIN"))):
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    if(
+        current_user["role"] == "ADMIN"
+        and user.role == "SUPER_ADMIN"
+    ):
+        raise HTTPException(
+            status_code = 403,
+            detail = "ADMIN cannot modify a SUPER_ADMIN"
+        )
+    if(
+        current_user["role"] == "ADMIN"
+        and userdata.role == "SUPER_ADMIN"
+    ):
+        raise HTTPException(
+            status_code = 403,
+            detail = "ADMIN cannot assign SUPER_ADMIN role"
+        )
     user.name = userdata.name
     user.email = userdata.email
-    user.password = hash_password(userdata.password)
+    if userdata.password:
+        user.password = hash_password(userdata.password)
     user.role = userdata.role
     user.updated_by = current_user["user_id"]
     db.commit()
@@ -168,6 +202,18 @@ def update_user_status(
             detail="User not found"
 
         )
+
+    if current_user["role"] == "ADMIN":
+        if user.id == current_user["user_id"]:
+            raise HTTPException(
+                status_code=403,
+                detail="ADMIN cannot change their own account status"
+            )
+        if user.role in ("SUPER_ADMIN", "ADMIN"):
+            raise HTTPException(
+                status_code=403,
+                detail="ADMIN cannot change the status of SUPER_ADMIN or ADMIN accounts"
+            )
 
     user.is_active = userdata.is_active
 
@@ -462,6 +508,7 @@ def update_device(
     device.password_encrypted = encrypted_password
     device.comments = device_data.comments
     device.device_status = device_data.device_status
+    device.updated_by = current_user["user_id"]
 
     db.commit()
     db.refresh(device)
