@@ -1,0 +1,159 @@
+/* =========================================================
+   SEARCH & FILTER BAR
+========================================================= */
+
+.search-filter-bar {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  margin-bottom: 24px;
+  background: #f8f9fa;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+
+/* =========================================================
+   SEARCH INPUT
+========================================================= */
+
+.search-filter-bar input {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  box-sizing: border-box;
+  padding: 0 15px;
+  background: #ffffff;
+  color: #222222;
+  border: 1px solid #dcdfe3;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+}
+
+.search-filter-bar input::placeholder {
+  color: #9a9a9a;
+}
+
+.search-filter-bar input:hover {
+  border-color: #c8cbd0;
+}
+
+.search-filter-bar input:focus {
+  border-color: #ff7600;
+  box-shadow: 0 0 0 3px rgba(255, 118, 0, 0.12);
+}
+
+
+/* =========================================================
+   DROPDOWNS
+========================================================= */
+
+.search-filter-bar select {
+  width: 160px;
+  flex: 0 0 160px;
+  height: 44px;
+  box-sizing: border-box;
+  padding: 0 12px;
+  background: #ffffff;
+  color: #333333;
+  border: 1px solid #dcdfe3;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  cursor: pointer;
+}
+
+.search-filter-bar select:hover {
+  border-color: #c8cbd0;
+}
+
+.search-filter-bar select:focus {
+  border-color: #ff7600;
+  box-shadow: 0 0 0 3px rgba(255, 118, 0, 0.12);
+}
+
+
+/* =========================================================
+   BUTTONS
+========================================================= */
+
+.search-filter-bar button {
+  height: 44px;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  padding: 0 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+
+/* Search */
+
+.search-filter-search-btn {
+  background: #ff7600;
+  color: #ffffff;
+  border: 1px solid #ff7600;
+}
+
+.search-filter-search-btn:hover {
+  background: #e96800;
+  border-color: #e96800;
+}
+
+.search-filter-search-btn:active {
+  transform: translateY(1px);
+}
+
+
+/* Clear */
+
+.search-filter-clear-btn {
+  background: #ffffff;
+  color: #555555;
+  border: 1px solid #dcdfe3;
+}
+
+.search-filter-clear-btn:hover {
+  background: #f3f3f3;
+  border-color: #c8cbd0;
+}
+
+.search-filter-clear-btn:active {
+  transform: translateY(1px);
+}
+
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 900px) {
+  .search-filter-bar {
+    flex-wrap: wrap;
+  }
+
+  .search-filter-bar input {
+    flex: 1 1 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .search-filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-filter-bar input,
+  .search-filter-bar select,
+  .search-filter-bar button {
+    width: 100%;
+    flex: 1 1 auto;
+  }
+}

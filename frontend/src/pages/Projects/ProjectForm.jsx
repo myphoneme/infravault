@@ -1,14 +1,49 @@
 import { createPortal } from "react-dom";
+import SearchableSelect from "../../components/UI/SearchableSelect";
 
 function ProjectForm({
   formData,
   devices,
+  repositories,
+  repositoriesLoading,
+  users,
+  usersLoading,
+  assignedUser,
+  currentAssignedUser,
   editingProject,
   saving,
   onChange,
   onSubmit,
   onCancel,
 }) {
+
+
+const usersForDisplay = [...users];
+
+if (
+  assignedUser &&
+  !usersForDisplay.some(
+    (user) => Number(user.id) === Number(assignedUser.id)
+  )
+) {
+  usersForDisplay.push(assignedUser);
+}
+
+const userNameCounts = usersForDisplay.reduce(
+  (counts, user) => {
+    const normalizedName =
+      user.name?.trim().toLowerCase();
+
+    if (normalizedName) {
+      counts[normalizedName] =
+        (counts[normalizedName] || 0) + 1;
+    }
+
+    return counts;
+  },
+  {}
+);
+
   const modal = (
     <div
       className="modal-overlay"
@@ -58,17 +93,28 @@ function ProjectForm({
             </div>
 
             {/* Repository */}
-            <div className="form-group">
-              <label>Repository Name</label>
+<div className="form-group">
+  <label>Repository Name</label>
 
-              <input
-                type="text"
-                name="repo_name"
-                value={formData.repo_name}
-                onChange={onChange}
-                required
-              />
-            </div>
+  <SearchableSelect
+    value={formData.repo_name}
+    options={repositories}
+    onChange={(value) =>
+      onChange({
+        target: {
+          name: "repo_name",
+          value,
+        },
+      })
+    }
+    placeholder="Select Repository"
+    searchPlaceholder="Search repository..."
+    disabled={repositoriesLoading || saving}
+    loading={repositoriesLoading}
+    getOptionValue={(repo) => repo.name}
+    getOptionLabel={(repo) => repo.name}
+  />
+</div>
 
             {/* Start Date */}
             <div className="form-group">
@@ -126,18 +172,50 @@ function ProjectForm({
               </select>
             </div>
 
-            {/* Assigned To */}
-            <div className="form-group">
-              <label>Assigned To</label>
 
-              <input
-                type="number"
-                name="assigned_to"
-                value={formData.assigned_to}
-                onChange={onChange}
-                placeholder="User ID"
-              />
-            </div>
+
+          {/* Assigned To */}
+<div className="form-group">
+  <label>Assigned To</label>
+
+  <SearchableSelect
+    value={formData.assigned_to}
+    options={usersForDisplay}
+    onChange={(value) =>
+      onChange({
+        target: {
+          name: "assigned_to",
+          value,
+        },
+      })
+    }
+    placeholder="Select User"
+    searchPlaceholder="Search user..."
+    disabled={usersLoading || saving}
+    loading={usersLoading}
+    getOptionValue={(user) => user.id}
+    getOptionLabel={(user) => {
+      const normalizedName =
+        user.name?.trim().toLowerCase();
+
+      const isDuplicateName =
+        userNameCounts[normalizedName] > 1;
+
+      let label = user.name?.trim() || "";
+
+      if (isDuplicateName) {
+        label += ` — ${user.email}`;
+      }
+
+      if (user.is_active === false) {
+        label += " (Inactive)";
+      }
+
+      return label;
+    }}
+  />
+</div>
+ 
 
             {/* Project Path */}
             <div className="form-group">
@@ -189,10 +267,9 @@ function ProjectForm({
                 value={formData.project_status}
                 onChange={onChange}
               >
-                <option value="Active">Active</option>
+                <option value="Pending">Pending</option>
                 <option value="Completed">Completed</option>
-                <option value="On Hold">On Hold</option>
-                <option value="Archived">Archived</option>
+                <option value="Overdue">Overdue</option>
               </select>
             </div>
 

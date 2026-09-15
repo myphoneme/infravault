@@ -1,18 +1,46 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+
+import { createPortal } from "react-dom";
 import api from "../api/axios";
+
+import SummaryCard from "../components/UI/SummaryCard";
+import SummaryCards from "../components/UI/SummaryCards";
+import SearchFilterBar from "../components/UI/SearchFilterBar";
+import PageHeader from "../components/UI/PageHeader";
 
 import DeviceList from "./Devices/DeviceList";
 import DeviceForm from "./Devices/DeviceForm";
 
+import {
+  Server,
+  CircleCheck,
+  CirclePause,
+  RadioTower,
+  WifiOff,
+  Power,
+  PackageOpen,
+} from "lucide-react";
+
 function Devices() {
-  const navigate = useNavigate();
+
 
   const [devices, setDevices] = useState([]);
+
+  const [deviceSummary, setDeviceSummary] = useState({
+  total_devices: 0,
+  active_devices: 0,
+  inactive_devices: 0,
+  reachable_devices: 0,
+  unreachable_devices: 0,
+  switched_off_devices: 0,
+  unused_devices: 0,
+});
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [viewingDevice, setViewingDevice] = useState(null);
 
 const [pagination, setPagination] = useState({
   page: 1,
@@ -25,6 +53,33 @@ const [pagination, setPagination] = useState({
 
 const [search, setSearch] = useState("");
 const [statusFilter, setStatusFilter] = useState("");
+const [deviceConditionFilter, setDeviceConditionFilter] = useState("");
+
+const totalDevices = pagination.total;
+
+const activeDevices = devices.filter(
+  (device) => device.device_status === "Active"
+).length;
+
+const inactiveDevices = devices.filter(
+  (device) => device.device_status === "Inactive"
+).length;
+
+const reachableDevices = devices.filter(
+  (device) => device.device_condition === "Reachable"
+).length;
+
+const unreachableDevices = devices.filter(
+  (device) => device.device_condition === "Unreachable"
+).length;
+
+const switchedOffDevices = devices.filter(
+  (device) => device.device_condition === "Switched Off"
+).length;
+
+const unusedDevices = devices.filter(
+  (device) => device.device_condition === "Unused"
+).length;
 
   const [showForm, setShowForm] = useState(false);
   const [editingDevice, setEditingDevice] = useState(null);
@@ -38,20 +93,36 @@ const [statusFilter, setStatusFilter] = useState("");
     password: "",
     comments: "",
     device_status: "Active",
+    device_condition: "Unused",
   });
+
+  const [confirmPassword, setConfirmPassword] = useState("");
+  
 
   useEffect(() => {
     fetchDevices();
+    fetchDeviceSummary();
   }, []);
 
   // =========================
   // GET DEVICES
   // =========================
+  
+ const fetchDeviceSummary = async () => {
+  try {
+    const response = await api.get("/devices/summary");
+
+    setDeviceSummary(response.data);
+  } catch (err) {
+    console.error("Failed to load device summary:", err);
+  }
+};
 
   const fetchDevices = async (
   page = 1,
   searchValue = search,
-  statusValue = statusFilter
+  statusValue = statusFilter,
+  conditionValue = deviceConditionFilter
 ) => {
   try {
     setLoading(true);
@@ -63,6 +134,7 @@ const [statusFilter, setStatusFilter] = useState("");
         limit: 20,
         search: searchValue || undefined,
         device_status: statusValue || undefined,
+        device_condition: conditionValue || undefined,
       },
     });
 
@@ -102,6 +174,12 @@ const [statusFilter, setStatusFilter] = useState("");
   const handleCreate = async (event) => {
     event.preventDefault();
 
+    // Confirm password validation
+    if (formData.password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
     try {
       setSaving(true);
       setError("");
@@ -111,7 +189,10 @@ const [statusFilter, setStatusFilter] = useState("");
       setSuccess("Device created successfully");
 
       resetForm();
+      setConfirmPassword("");
+
       await fetchDevices();
+      await fetchDeviceSummary();
     } catch (err) {
       console.error(err);
 
@@ -140,6 +221,7 @@ const [statusFilter, setStatusFilter] = useState("");
       password: "",
       comments: device.comments || "",
       device_status: device.device_status,
+      device_condition: device.device_condition || "Unused",
     });
 
     setShowForm(true);
@@ -165,6 +247,7 @@ const [statusFilter, setStatusFilter] = useState("");
 
       resetForm();
       await fetchDevices();
+      await fetchDeviceSummary();
     } catch (err) {
       console.error(err);
 
@@ -176,6 +259,23 @@ const [statusFilter, setStatusFilter] = useState("");
       setSaving(false);
     }
   };
+
+  const handleViewDevice = async (deviceId) => {
+  try {
+    setError("");
+
+    const response = await api.get(`/devices/${deviceId}`);
+
+    setViewingDevice(response.data);
+  } catch (err) {
+    console.error(err);
+
+    setError(
+      err.response?.data?.detail ||
+      "Failed to load device details"
+    );
+  }
+};
 
   // =========================
   // DELETE DEVICE
@@ -198,6 +298,7 @@ const [statusFilter, setStatusFilter] = useState("");
       setSuccess("Device deleted successfully");
 
       await fetchDevices();
+      await fetchDeviceSummary();
     } catch (err) {
       console.error(err);
 
@@ -210,6 +311,7 @@ const [statusFilter, setStatusFilter] = useState("");
 
   const handleAdd = () => {
   setEditingDevice(null);
+  setConfirmPassword("");
 
   setFormData({
     device_name: "",
@@ -220,6 +322,7 @@ const [statusFilter, setStatusFilter] = useState("");
     password: "",
     comments: "",
     device_status: "Active",
+    device_condition: "Unused",
   });
 
   setShowForm(true);
@@ -232,6 +335,7 @@ const [statusFilter, setStatusFilter] = useState("");
   const resetForm = () => {
     setShowForm(false);
     setEditingDevice(null);
+    setConfirmPassword("");
 
     setFormData({
       device_name: "",
@@ -240,8 +344,10 @@ const [statusFilter, setStatusFilter] = useState("");
       connection_type: "SSH",
       username: "",
       password: "",
+    
       comments: "",
       device_status: "Active",
+      device_condition: "Unused",
     });
   };
 
@@ -250,38 +356,204 @@ const [statusFilter, setStatusFilter] = useState("");
   // =========================
 
   if (loading) {
-    return <h2>Loading devices...</h2>;
-  }
+  return (
+    <div className="page-container">
+      <div className="device-loading">
+        <div className="loading-spinner"></div>
+        <span>Loading devices...</span>
+      </div>
+    </div>
+  );
+}
+
+const deviceViewModal = viewingDevice && (
+  <div
+    className="modal-overlay"
+    onClick={() => setViewingDevice(null)}
+  >
+    <div
+      className="device-modal"
+      onClick={(event) => event.stopPropagation()}
+    >
+      <div className="modal-header">
+        <div>
+          <h2>Device Details</h2>
+          <p>View device information</p>
+        </div>
+
+        <button
+          type="button"
+          className="modal-close"
+          onClick={() => setViewingDevice(null)}
+        >
+          ×
+        </button>
+      </div>
+    <div className="view-modal-body">
+      <div className="form-grid">
+        <div className="form-group">
+          <label>ID</label>
+          <div className="view-value">
+            {viewingDevice.id ?? "—"}
+          </div>
+        </div>
+
+        <div className="form-group">
+          <label>Device Name</label>
+          <div className="view-value">
+            {viewingDevice.device_name || "—"}
+          </div>
+        </div>
+
+        <div className="form-group">
+          <label>Host</label>
+          <div className="view-value">
+            {viewingDevice.host || "—"}
+          </div>
+        </div>
+
+        <div className="form-group">
+          <label>Port</label>
+          <div className="view-value">
+            {viewingDevice.port ?? "—"}
+          </div>
+        </div>
+
+        <div className="form-group">
+          <label>Connection Type</label>
+          <div className="view-value">
+            {viewingDevice.connection_type || "—"}
+          </div>
+        </div>
+
+        <div className="form-group">
+          <label>Username</label>
+          <div className="view-value">
+            {viewingDevice.username || "—"}
+          </div>
+        </div>
+
+        <div className="form-group">
+         <label>Password</label>
+         <div className="view-value">
+         {viewingDevice.password || "—"}
+         </div>
+        </div>
+
+        <div className="form-group">
+          <label>Status</label>
+          <div className="view-value">
+            {viewingDevice.device_status || "—"}
+          </div>
+        </div>
+
+        <div className="form-group">
+          <label>Device Status</label>
+          <div className="view-value">
+            {viewingDevice.device_condition || "—"}
+          </div>
+        </div>
+
+        <div className="form-group full-width">
+          <label>Comments</label>
+          <div className="view-value multiline">
+            {viewingDevice.comments || "—"}
+          </div>
+        
+        
+        <div className="modal-footer">
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => setViewingDevice(null)}
+          >
+            Close
+          </button>
+        </div>
+
+      </div>
+      </div>
+    </div>  
+    </div>
+  </div>
+);
 
   // =========================
   // PAGE
   // =========================
 
   return (
-    <div className="device-page">
+    <div className="page-container">
 
       {/* HEADER */}
 
-      <div className="page-header">
+      <PageHeader
+         title="Device Management"
+         description="Manage your infrastructure devices."
+         actionLabel="+ Add Device"
+         onAction={handleAdd}
+      />
 
-        <div>
-          <h1>Device Management</h1>
-          <p>
-            Manage your infrastructure devices.
-          </p>
-        </div>
 
-        <button
-          type="button"
-          className="primary-button"
-          onClick={handleAdd}
->
-          + Add Device
-        </button>
+{/* DEVICE SUMMARY */}
 
-      </div>
+<SummaryCards>
 
-      {/* ERROR */}
+  <SummaryCard
+    title="Total Devices"
+    value={deviceSummary.total_devices}
+    icon={Server}
+    variant="primary"
+  />
+
+  <SummaryCard
+    title="Active"
+    value={deviceSummary.active_devices}
+    icon={CircleCheck}
+    variant="success"
+  />
+
+  <SummaryCard
+    title="Inactive"
+    value={deviceSummary.inactive_devices}
+    icon={CirclePause}
+    variant="warning"
+  />
+
+  <SummaryCard
+    title="Reachable"
+    value={deviceSummary.reachable_devices}
+    icon={RadioTower}
+    variant="success"
+  />
+
+  <SummaryCard
+    title="Unreachable"
+    value={deviceSummary.unreachable_devices}
+    icon={WifiOff}
+    variant="danger"
+  />
+
+  <SummaryCard
+    title="Switched Off"
+    value={deviceSummary.switched_off_devices}
+    icon={Power}
+    variant="warning"
+  />
+
+  <SummaryCard
+    title="Unused"
+    value={deviceSummary.unused_devices}
+    icon={PackageOpen}
+    variant="info"
+  />
+
+</SummaryCards>
+
+
+
+
+            {/* ERROR */}
 
       {error && (
         <div className="error-message">
@@ -312,48 +584,52 @@ const [statusFilter, setStatusFilter] = useState("");
               : handleCreate
           }
           onCancel={resetForm}
+          confirmPassword={confirmPassword}
+          setConfirmPassword={setConfirmPassword}
         />
       )}
 
       {/* FILTERS */}
 
-<div className="device-filters">
+<SearchFilterBar
+  search={{
+    value: search,
+    onChange: setSearch,
+    placeholder: "Search by device name",
+  }}
+  filters={[
+    {
+      key: "status",
+      value: statusFilter,
+      onChange: setStatusFilter,
+      options: [
+        { value: "", label: "All Status" },
+        { value: "Active", label: "Active" },
+        { value: "Inactive", label: "Inactive" },
+      ],
+    },
+    {
+      key: "condition",
+      value: deviceConditionFilter,
+      onChange: setDeviceConditionFilter,
+      options: [
+        { value: "", label: "All Device Status" },
+        { value: "Reachable", label: "Reachable" },
+        { value: "Unreachable", label: "Unreachable" },
+        { value: "Switched Off", label: "Switched Off" },
+        { value: "Unused", label: "Unused" },
+      ],
+    },
+  ]}
+  onSearch={() => fetchDevices(1)}
+  onClear={() => {
+    setSearch("");
+    setStatusFilter("");
+    setDeviceConditionFilter("");
+    fetchDevices(1, "", "");
+  }}
+/>
 
-  <input
-    type="text"
-    placeholder="Search by device name"
-    value={search}
-    onChange={(e) => setSearch(e.target.value)}
-  />
-
-  <select
-    value={statusFilter}
-    onChange={(e) => setStatusFilter(e.target.value)}
-  >
-    <option value="">All Status</option>
-    <option value="Active">Active</option>
-    <option value="Inactive">Inactive</option>
-  </select>
-
-  <button
-    type="button"
-    onClick={() => fetchDevices(1)}
-  >
-    Search
-  </button>
-
-  <button
-    type="button"
-    onClick={() => {
-      setSearch("");
-      setStatusFilter("");
-      fetchDevices(1, "", "");
-    }}
-  >
-    Clear
-  </button>
-
-</div>
 
       {/* DEVICE LIST */}
 
@@ -361,9 +637,8 @@ const [statusFilter, setStatusFilter] = useState("");
         devices={devices}
         onEdit={handleEdit}
         onDelete={handleDelete}
-        onView={(device) =>
-          navigate(`/devices/${device.id}`)
-        }
+        onView={(device) => handleViewDevice(device.id)}
+          
       />
 
       {/* PAGINATION */}
@@ -395,7 +670,8 @@ const [statusFilter, setStatusFilter] = useState("");
   </button>
 
 </div>
-
+{viewingDevice &&
+  createPortal(deviceViewModal, document.body)}
 
     </div>
   );

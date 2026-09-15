@@ -1,373 +1,853 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import api from "../api/axios";
+import DashboardLineChart from "../components/DashboardLineChart";
+import SummaryCard from "../components/UI/SummaryCard";
+import SummaryCards from "../components/UI/SummaryCards";
+import PageHeader from "../components/UI/PageHeader";
+
+import {
+AlertTriangle,
+Bell,
+CheckCircle,
+Clock3,
+Folder,
+FolderKanban,
+PackageOpen,
+Power,
+Server,
+Wifi,
+WifiOff,
+Search,
+} from "lucide-react";
+
+
 
 function Dashboard() {
-  const [users, setUsers] = useState([]);
-  const [totalUsers, setTotalUsers] = useState(0);
-  const [projects, setProjects] = useState([]);
-  const [devices, setDevices] = useState([]);
+const [summary, setSummary] = useState({
+projects: {
+total: 0,
+pending: 0,
+completed: 0,
+overdue: 0,
+},
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+devices: {
+  total: 0,
+  active: 0,
+  inactive: 0,
+  reachable: 0,
+  unreachable: 0,
+  switched_off: 0,
+  unused: 0,
+},
 
-  const loadDashboard = async () => {
-    try {
-      setLoading(true);
-      setError("");
+});
 
-      const projectsResponse = await api.get("/projects/");
-      const devicesResponse = await api.get("/devices/");
+const [projects, setProjects] = useState([]);
+const [devices, setDevices] = useState([]);
 
-      setProjects(projectsResponse.data.data);
-      setDevices(devicesResponse.data.data);
 
-      try {
-        const usersResponse = await api.get("/users/");
-        setUsers(usersResponse.data.data);
-        setTotalUsers(usersResponse.data.pagination.total);
-      } catch (userError) {
-        console.log("User summary unavailable for this role.");
-        setUsers([]);
-      }
-    } catch (err) {
-      console.error(err);
+const [notificationFilter, setNotificationFilter] =
+useState("All");
 
-      setError(
-        err.response?.data?.detail ||
-        "Failed to load dashboard data"
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+const [priorityFilter, setPriorityFilter] =
+useState("All");
 
-  useEffect(() => {
-    loadDashboard();
-  }, []);
+const[notificationSearch, setNotificationSearch]= useState("");
 
-  const activeUsers = users.filter(
-    (user) => user.is_active
-  ).length;
+const [loading, setLoading] = useState(true);
+const [error, setError] = useState("");
 
-  const inactiveUsers = users.filter(
-    (user) => !user.is_active
-  ).length;
+const currentYear = new Date().getFullYear();
 
-  const activeProjects = projects.filter(
-    (project) => project.project_status === "Active"
-  ).length;
+const [projectYear, setProjectYear] = useState(currentYear);
+const [deviceYear, setDeviceYear] = useState(currentYear);
 
-  const completedProjects = projects.filter(
-    (project) => project.project_status === "Completed"
-  ).length;
+const [projectMonthlyData, setProjectMonthlyData] = useState([]);
+const [deviceMonthlyData, setDeviceMonthlyData] = useState([]);
 
-  const onHoldProjects = projects.filter(
-    (project) => project.project_status === "On Hold"
-  ).length;
 
-  const archivedProjects = projects.filter(
-    (project) => project.project_status === "Archived"
-  ).length;
+/* =========================================================
+   LOAD DASHBOARD
+========================================================= */
 
-  const activeDevices = devices.filter(
-    (device) => device.device_status === "Active"
-  ).length;
+const loadDashboard = async () => {
+  try {
+    setLoading(true);
+    setError("");
 
-  const inactiveDevices =
-    devices.length - activeDevices;
+    const [
+      summaryResponse,
+      projectsResponse,
+      devicesResponse,
+    ] = await Promise.all([
+      api.get("/dashboard/summary"),
+      api.get("/projects/?page=1&limit=100"),
+      api.get("/devices/?page=1&limit=100"),
+    ]);
 
-  const getProjectStatusClass = (status) => {
-    switch (status) {
-      case "Active":
-        return "status-active";
+    setSummary(summaryResponse.data);
 
-      case "Completed":
-        return "status-completed";
-
-      case "On Hold":
-        return "status-on-hold";
-
-      case "Archived":
-        return "status-archived";
-
-      default:
-        return "status-inactive";
-    }
-  };
-
-  const getDeviceStatusClass = (status) => {
-    return status === "Active"
-      ? "status-active"
-      : "status-inactive";
-  };
-
-  if (loading) {
-    return (
-      <div className="dashboard-page">
-        <h1>Dashboard</h1>
-        <p>Loading dashboard...</p>
-      </div>
+    setProjects(
+      projectsResponse.data.data || []
     );
+
+    setDevices(
+      devicesResponse.data.data || []
+    );
+
+  } catch (err) {
+    console.error(err);
+
+    const detail = err.response?.data?.detail;
+
+    if (Array.isArray(detail)) {
+      setError(
+        detail.map((item) => item.msg).join(", ")
+      );
+    } else {
+      setError(
+        detail || "Failed to load dashboard data"
+      );
+    }
+
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+
+
+
+
+useEffect(() => {
+  loadDashboard();
+}, []);
+
+useEffect(() => {
+  const loadProjectMonthlyData = async () => {
+    try {
+      const response = await api.get(
+        `/dashboard/project-monthly?year=${projectYear}`
+      );
+
+      setProjectMonthlyData(response.data.months || []);
+    } catch (err) {
+      console.error("Project monthly data error:", err);
+    }
+  };
+
+  loadProjectMonthlyData();
+}, [projectYear]);
+
+
+useEffect(() => {
+  const loadDeviceMonthlyData = async () => {
+    try {
+      const response = await api.get(
+        `/dashboard/device-monthly?year=${deviceYear}`
+      );
+
+      setDeviceMonthlyData(response.data.months || []);
+    } catch (err) {
+      console.error("Device monthly data error:", err);
+    }
+  };
+
+  loadDeviceMonthlyData();
+}, [deviceYear]);
+
+/* =========================================================
+   LOAD PROJECT MONTHLY DATA
+========================================================= */
+
+useEffect(() => {
+  const loadProjectMonthlyData = async () => {
+    try {
+      const response = await api.get(
+        `/dashboard/project-monthly?year=${projectYear}`
+      );
+
+      setProjectMonthlyData(
+        response.data.months || []
+      );
+
+    } catch (err) {
+      console.error("Project monthly data error:", err);
+    }
+  };
+
+  loadProjectMonthlyData();
+}, [projectYear]);
+
+
+/* =========================================================
+   LOAD DEVICE MONTHLY DATA
+========================================================= */
+
+useEffect(() => {
+  const loadDeviceMonthlyData = async () => {
+    try {
+      const response = await api.get(
+        `/dashboard/device-monthly?year=${deviceYear}`
+      );
+
+      setDeviceMonthlyData(
+        response.data.months || []
+      );
+
+    } catch (err) {
+      console.error("Device monthly data error:", err);
+    }
+  };
+
+  loadDeviceMonthlyData();
+}, [deviceYear]);
+
+
+/* =========================================================
+   NOTIFICATIONS
+========================================================= */
+
+const notifications = useMemo(() => {
+  const list = [];
+
+  /*
+   * Project notifications
+   */
+
+  projects.forEach((project) => {
+    // Completed projects do not need a notification
+    if (project.project_status === "Completed") {
+      return;
+    }
+
+    // Overdue = High priority
+    if (project.project_status === "Overdue") {
+      list.push({
+        id: `project-overdue-${project.id}`,
+        type: "Projects",
+        priority: "High",
+        title: "Project overdue",
+        description:
+          `${project.project_name} has passed its deadline.`,
+        icon: AlertTriangle,
+      });
+
+      return;
+    }
+
+    // Pending = Medium priority
+    if (project.project_status === "Pending") {
+      list.push({
+        id: `project-pending-${project.id}`,
+        type: "Projects",
+        priority: "Medium",
+        title: "Project pending",
+        description:
+          `${project.project_name} is currently pending.`,
+        icon: Clock3,
+      });
+    }
+  });
+
+
+  /*
+   * Device notifications
+   *
+   * Only one notification is generated per device.
+   * Higher-priority conditions are checked first.
+   */
+
+  devices.forEach((device) => {
+    // Unreachable = High priority
+    if (device.device_condition === "Unreachable") {
+      list.push({
+        id: `device-unreachable-${device.id}`,
+        type: "Devices",
+        priority: "High",
+        title: "Device unreachable",
+        description:
+          `${device.device_name} is currently unreachable.`,
+        icon: WifiOff,
+      });
+
+      return;
+    }
+
+    // Switched Off = Medium priority
+    if (device.device_condition === "Switched Off") {
+      list.push({
+        id: `device-off-${device.id}`,
+        type: "Devices",
+        priority: "Medium",
+        title: "Device switched off",
+        description:
+          `${device.device_name} is switched off.`,
+        icon: Power,
+      });
+
+      return;
+    }
+
+    // Inactive = Medium priority
+    if (device.device_status === "Inactive") {
+      list.push({
+        id: `device-inactive-${device.id}`,
+        type: "Devices",
+        priority: "Medium",
+        title: "Device inactive",
+        description:
+          `${device.device_name} is marked inactive.`,
+        icon: WifiOff,
+      });
+
+      return;
+    }
+
+    // Unused = Low priority
+    if (device.device_condition === "Unused") {
+      list.push({
+        id: `device-unused-${device.id}`,
+        type: "Devices",
+        priority: "Low",
+        title: "Unused device",
+        description:
+          `${device.device_name} is currently unused.`,
+        icon: PackageOpen,
+      });
+    }
+  });
+
+  return list;
+}, [projects, devices]);
+
+
+/* =========================================================
+   FILTER NOTIFICATIONS
+========================================================= */
+
+const filteredNotifications =
+  notifications.filter((notification) => {
+
+    const typeMatches =
+      notificationFilter === "All" ||
+      notification.type === notificationFilter;
+
+
+    const priorityMatches =
+      priorityFilter === "All" ||
+      notification.priority === priorityFilter;
+
+
+    const searchText =
+      notificationSearch.trim().toLowerCase();
+
+
+    const searchMatches =
+      !searchText ||
+      notification.title
+        .toLowerCase()
+        .includes(searchText) ||
+      notification.description
+        .toLowerCase()
+        .includes(searchText);
+
+
+    return (
+      typeMatches &&
+      priorityMatches &&
+      searchMatches
+    );
+
+  });
+
+
+/* =========================================================
+   PRIORITY CLASS
+========================================================= */
+
+const getPriorityClass = (priority) => {
+
+  switch (priority) {
+
+    case "High":
+      return "notification-priority-high";
+
+    case "Medium":
+      return "notification-priority-medium";
+
+    case "Low":
+      return "notification-priority-low";
+
+    default:
+      return "";
+
   }
 
-  return (
-    <div className="dashboard-page">
+};
 
-      <div className="page-header">
-        <div>
-          <h1>Dashboard</h1>
-          <p>Infrastructure overview</p>
-        </div>
-      </div>
 
-      {error && (
-        <div className="error-message">
-          {error}
-        </div>
-      )}
 
-      {/* Summary Cards */}
+/* =========================================================
+LOADING
+========================================================= */
 
-      <div className="dashboard-cards">
+if (loading) {
+return (
+<div className="page-container">
 
-  <div className="dashboard-card">
-    <div className="dashboard-card-header">
-      <div>
-        <h3>Users</h3>
-        <div className="dashboard-card-number">
-          {totalUsers}
-        </div>
-      </div>
+    <PageHeader
+      title="Dashboard"
+      description="Infrastructure overview"
+   />
 
-      <div className="dashboard-card-icon">
-        👥
-      </div>
+    <div className="dashboard-loading">
+      Loading dashboard...
     </div>
 
-    <p>Total Users</p>
   </div>
+);
+
+}
+
+const projectLines = [
+  {
+    dataKey: "pending",
+    name: "Pending",
+    color: "#f59e0b",
+  },
+  {
+    dataKey: "completed",
+    name: "Completed",
+    color: "#16a34a",
+  },
+  {
+    dataKey: "overdue",
+    name: "Overdue",
+    color: "#dc2626",
+  },
+];
+
+const deviceLines = [
+  {
+    dataKey: "active",
+    name: "Active",
+    color: "#2563eb",
+  },
+  {
+    dataKey: "inactive",
+    name: "Inactive",
+    color: "#6b7280",
+  },
+  {
+    dataKey: "reachable",
+    name: "Reachable",
+    color: "#16a34a",
+  },
+  {
+    dataKey: "unreachable",
+    name: "Unreachable",
+    color: "#dc2626",
+  },
+  {
+    dataKey: "switched_off",
+    name: "Switched Off",
+    color: "#f59e0b",
+  },
+  {
+    dataKey: "unused",
+    name: "Unused",
+    color: "#8b5cf6",
+  },
+];
 
 
-  <div className="dashboard-card">
-    <div className="dashboard-card-header">
-      <div>
-        <h3>Projects</h3>
-        <div className="dashboard-card-number">
-          {projects.length}
-        </div>
-      </div>
 
-      <div className="dashboard-card-icon">
-        📁
-      </div>
+/* =========================================================
+DASHBOARD
+========================================================= */
+
+return (
+<div className="page-container">
+
+  {/* =====================================================
+      PAGE HEADER
+  ===================================================== */}
+
+  <PageHeader
+    title="Dashboard"
+    description="Infrastructure overview"
+  />
+
+
+  {error && (
+    <div className="error-message">
+      {error}
     </div>
-
-    <p>Total Projects</p>
-  </div>
+  )}
 
 
-  <div className="dashboard-card">
-    <div className="dashboard-card-header">
-      <div>
-        <h3>Devices</h3>
-        <div className="dashboard-card-number">
-          {devices.length}
-        </div>
-      </div>
+  {/* =====================================================
+    SUMMARY CARDS
+===================================================== */}
 
-      <div className="dashboard-card-icon">
-        🖥️
-      </div>
-    </div>
+<SummaryCards>
+  <SummaryCard
+    title="Total Projects"
+    value={summary.projects.total}
+    icon={FolderKanban}
+    variant="primary"
+  />
 
-    <p>Total Devices</p>
-  </div>
+  <SummaryCard
+    title="Pending Projects"
+    value={summary.projects.pending}
+    icon={Clock3}
+    variant="warning"
+  />
+
+  <SummaryCard
+    title="Overdue Projects"
+    value={summary.projects.overdue}
+    icon={AlertTriangle}
+    variant="danger"
+  />
+
+  <SummaryCard
+    title="Total Devices"
+    value={summary.devices.total}
+    icon={Server}
+    variant="info"
+  />
+</SummaryCards>
 
 
-  <div className="dashboard-card">
-    <div className="dashboard-card-header">
-      <div>
-        <h3>System Status</h3>
 
-        <div className="dashboard-card-status">
-          <span className="status-badge status-active">
-            ● Healthy
-          </span>
-        </div>
-      </div>
+ {/* =====================================================
+    PROJECT + DEVICE OVERVIEW
+===================================================== */}
 
-      <div className="dashboard-card-icon">
-        ⚡
-      </div>
-    </div>
+<div className="dashboard-chart-grid">
 
-    <p>Infrastructure Overview</p>
-  </div>
+  {/* PROJECT OVERVIEW */}
+
+  <DashboardLineChart
+    title="Project Overview"
+    description="Pending, completed and overdue projects"
+    icon={Folder}
+    data={projectMonthlyData}
+    lines={projectLines}
+    metrics={[
+      {
+        label: "Pending",
+        value: summary.projects.pending,
+        className: "dashboard-metric-pending",
+      },
+      {
+        label: "Completed",
+        value: summary.projects.completed,
+        className: "dashboard-metric-completed",
+      },
+      {
+        label: "Overdue",
+        value: summary.projects.overdue,
+        className: "dashboard-metric-overdue",
+      },
+    ]}
+    year={projectYear}
+    onYearChange={setProjectYear}
+  />
+
+  {/* DEVICE OVERVIEW */}
+
+  <DashboardLineChart
+    title="Device Overview"
+    description="Active, inactive and device conditions"
+    icon={Server}
+    data={deviceMonthlyData}
+    lines={deviceLines}
+    metrics={[
+      {
+        label: "Active",
+        value: summary.devices.active,
+        className: "dashboard-metric-active",
+      },
+      {
+        label: "Inactive",
+        value: summary.devices.inactive,
+        className: "dashboard-metric-inactive",
+      },
+      {
+        label: "Reachable",
+        value: summary.devices.reachable,
+        className: "dashboard-metric-reachable",
+      },
+      {
+        label: "Unreachable",
+        value: summary.devices.unreachable,
+        className: "dashboard-metric-unreachable",
+      },
+      {
+        label: "Switched Off",
+        value: summary.devices.switched_off,
+        className: "dashboard-metric-switched-off",
+      },
+      {
+        label: "Unused",
+        value: summary.devices.unused,
+        className: "dashboard-metric-unused",
+      },
+    ]}
+    year={deviceYear}
+    onYearChange={setDeviceYear}
+  />
 
 </div>
 
-      {/* Overview Sections */}
+      {/* =====================================================
+          NOTIFICATIONS
+      ===================================================== */}
 
-      <div className="dashboard-overview">
+      <div className="dashboard-section full-width">
 
-        {/* Users */}
+        <div className="dashboard-section-header">
 
-        <div className="dashboard-section">
-  <h2>Users Overview</h2>
-
-  <div className="overview-row">
-    <span>Active</span>
-    <span className="status-badge status-active">
-      {activeUsers}
-    </span>
-  </div>
-
-  <div className="overview-row">
-    <span>Inactive</span>
-    <span className="status-badge status-inactive">
-      {inactiveUsers}
-    </span>
-  </div>
-</div>
-
-        {/* Projects */}
-
-        <div className="dashboard-section">
-  <h2>Projects Overview</h2>
-
-  <div className="overview-row">
-    <span>Active</span>
-    <span className="status-badge status-active">
-      {activeProjects}
-    </span>
-  </div>
-
-  <div className="overview-row">
-    <span>Completed</span>
-    <span className="status-badge status-completed">
-      {completedProjects}
-    </span>
-  </div>
-
-  <div className="overview-row">
-    <span>On Hold</span>
-    <span className="status-badge status-on-hold">
-      {onHoldProjects}
-    </span>
-  </div>
-
-  <div className="overview-row">
-    <span>Archived</span>
-    <span className="status-badge status-archived">
-      {archivedProjects}
-    </span>
-  </div>
-</div>
-
-
-        {/* Devices */}
-
-        <div className="dashboard-section">
-  <h2>Devices Overview</h2>
-
-  <div className="overview-row">
-    <span>Active</span>
-    <span className="status-badge status-active">
-      {activeDevices}
-    </span>
-  </div>
-
-  <div className="overview-row">
-    <span>Inactive / Other</span>
-    <span className="status-badge status-inactive">
-      {inactiveDevices}
-    </span>
-  </div>
-</div>
-
-      </div>
-
-      {/* Recent Projects */}
-
-      {/* Recent Projects */}
-
-<div className="dashboard-section full-width">
-  <h2>Recent Projects</h2>
-
-  {projects.length === 0 ? (
-    <p>No projects found.</p>
-  ) : (
-    <div className="dashboard-list">
-
-      {projects.slice(0, 5).map((project) => (
-        <div
-          className="dashboard-list-item"
-          key={project.id}
-        >
           <div>
-            <strong>
-              {project.project_name}
-            </strong>
+            <h2>Notifications</h2>
 
             <p>
-              {project.repo_name}
+              Important project and device updates
             </p>
           </div>
 
-          <span
-            className={`status-badge ${
-              getProjectStatusClass(project.project_status)
-            }`}
-          >
-            {project.project_status}
-          </span>
+          <Bell
+            size={24}
+            strokeWidth={1.8}
+          />
+
         </div>
-      ))}
 
-    </div>
-  )}
-</div>
 
-      {/* Recent Devices */}
+      {/* Notification Filters */}
 
-      {/* Recent Devices */}
+<div className="dashboard-notification-toolbar">
 
-<div className="dashboard-section full-width">
-  <h2>Recent Devices</h2>
+  {/* TYPE FILTER */}
 
-  {devices.length === 0 ? (
-    <p>No devices found.</p>
-  ) : (
-    <div className="dashboard-list">
+  <div className="dashboard-notification-type-filter">
 
-      {devices.slice(0, 5).map((device) => (
-        <div
-          className="dashboard-list-item"
-          key={device.id}
-        >
-          <div>
-            <strong>
-              {device.device_name}
-            </strong>
+    <button
+      type="button"
+      className={
+        notificationFilter === "All"
+          ? "dashboard-notification-tab active"
+          : "dashboard-notification-tab"
+      }
+      onClick={() =>
+        setNotificationFilter("All")
+      }
+    >
+      All
+    </button>
+
+    <button
+      type="button"
+      className={
+        notificationFilter === "Projects"
+          ? "dashboard-notification-tab active"
+          : "dashboard-notification-tab"
+      }
+      onClick={() =>
+        setNotificationFilter("Projects")
+      }
+    >
+      Projects
+    </button>
+
+    <button
+      type="button"
+      className={
+        notificationFilter === "Devices"
+          ? "dashboard-notification-tab active"
+          : "dashboard-notification-tab"
+      }
+      onClick={() =>
+        setNotificationFilter("Devices")
+      }
+    >
+      Devices
+    </button>
+
+  </div>
+
+
+  {/* SEARCH */}
+
+  <div className="dashboard-notification-search">
+
+    <Search
+      size={17}
+      strokeWidth={1.8}
+    />
+
+    <input
+      type="text"
+      placeholder="Search notifications..."
+      value={notificationSearch}
+      onChange={(e) =>
+        setNotificationSearch(e.target.value)
+      }
+    />
+
+  </div>
+
+
+  {/* PRIORITY */}
+
+  <div className="dashboard-notification-priority-filter">
+
+    <button
+      type="button"
+      className={
+        priorityFilter === "All"
+          ? "dashboard-notification-priority-button active"
+          : "dashboard-notification-priority-button"
+      }
+      onClick={() =>
+        setPriorityFilter("All")
+      }
+    >
+      All Priority
+    </button>
+
+    <button
+      type="button"
+      className={
+        priorityFilter === "High"
+          ? "dashboard-notification-priority-button active"
+          : "dashboard-notification-priority-button"
+      }
+      onClick={() =>
+        setPriorityFilter("High")
+      }
+    >
+      High
+    </button>
+
+    <button
+      type="button"
+      className={
+        priorityFilter === "Medium"
+          ? "dashboard-notification-priority-button active"
+          : "dashboard-notification-priority-button"
+      }
+      onClick={() =>
+        setPriorityFilter("Medium")
+      }
+    >
+      Medium
+    </button>
+
+    <button
+      type="button"
+      className={
+        priorityFilter === "Low"
+          ? "dashboard-notification-priority-button active"
+          : "dashboard-notification-priority-button"
+      }
+      onClick={() =>
+        setPriorityFilter("Low")
+      }
+    >
+      Low
+    </button>
+
+  </div>
+
+</div> 
+
+        {/* Notification List */}
+
+        {filteredNotifications.length === 0 ? (
+
+          <div className="dashboard-empty-state">
+
+            <Bell
+              size={40}
+              strokeWidth={1.5}
+            />
+
+            <h3>No notifications</h3>
 
             <p>
-              {device.host}
+              There are no notifications matching
+              the selected filters.
             </p>
+
           </div>
 
-          <span
-            className={`status-badge ${
-              getDeviceStatusClass(device.device_status)
-            }`}
-          >
-            {device.device_status}
-          </span>
-        </div>
-      ))}
+        ) : (
 
-    </div>
-  )}
-</div>
+          <div className="dashboard-notification-list">
+
+            {filteredNotifications.map(
+              (notification) => {
+
+                const NotificationIcon =
+                  notification.icon;
+
+                return (
+                  <div
+                    className="dashboard-notification-item"
+                    key={notification.id}
+                  >
+
+                    <div className="dashboard-notification-icon">
+                      <NotificationIcon
+                        size={22}
+                        strokeWidth={1.8}
+                      />
+                    </div>
+
+
+                    <div className="dashboard-notification-content">
+
+                      <strong>
+                        {notification.title}
+                      </strong>
+
+                      <p>
+                        {notification.description}
+                      </p>
+
+                    </div>
+
+
+                    <span
+                      className={`dashboard-notification-priority ${getPriorityClass(
+                        notification.priority
+                      )}`}
+                    >
+                      {notification.priority}
+                    </span>
+
+                  </div>
+                );
+
+              }
+            )}
+
+          </div>
+
+        )}
+
+      </div>
+
+
+      
+
 
     </div>
   );

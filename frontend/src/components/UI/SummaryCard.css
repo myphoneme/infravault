@@ -1,0 +1,154 @@
+/* =========================================================
+   SUMMARY CARD
+========================================================= */
+
+.summary-card {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+
+  width: 100%;
+  min-height: 120px;
+
+  padding: 20px 24px 20px 28px;
+
+  background: #ffffff;
+
+  border: 1px solid #d1d5db;
+  border-radius: 16px;
+
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+
+/* =========================================================
+   LEFT COLOR STRIP
+========================================================= */
+
+.summary-card::before {
+  content: "";
+
+  position: absolute;
+
+  top: 0;
+  left: 0;
+  bottom: 0;
+
+  width: 8px;
+
+  border-radius: 16px 0 0 16px;
+}
+
+
+/* =========================================================
+   COLOR VARIANTS
+========================================================= */
+
+.summary-card-primary {
+  background: #eff6ff;
+}
+
+.summary-card-primary::before {
+  background: #3b82f6;
+}
+
+
+.summary-card-success {
+  background: #f0fdf4;
+}
+
+.summary-card-success::before {
+  background: #20c47a;
+}
+
+
+.summary-card-warning {
+  background: #fff7ed;
+}
+
+.summary-card-warning::before {
+  background: #f59e0b;
+}
+
+
+.summary-card-danger {
+  background: #fef2f2;
+}
+
+.summary-card-danger::before {
+  background: #ef4444;
+}
+
+
+.summary-card-info {
+  background: #eef2ff;
+}
+
+.summary-card-info::before {
+  background: #6366f1;
+}
+
+
+/* =========================================================
+   ICON
+========================================================= */
+
+.summary-card-icon {
+  flex: 0 0 70px;
+
+  width: 70px;
+  height: 70px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: #111827;
+}
+
+
+/* =========================================================
+   CONTENT
+========================================================= */
+
+.summary-card-content {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+
+/* =========================================================
+   LABEL
+========================================================= */
+
+.summary-card-label {
+  display: block;
+
+  margin-bottom: 8px;
+
+  font-size: 19px;
+  line-height: 1.25;
+  font-weight: 500;
+
+  color: #374151;
+}
+
+
+/* =========================================================
+   NUMBER
+========================================================= */
+
+.summary-card-number {
+  display: block;
+
+  font-size: 42px;
+  line-height: 1;
+  font-weight: 700;
+
+  color: #111827;
+}

@@ -1,14 +1,17 @@
 from fastapi import FastAPI, Depends, HTTPException
 from app.database import Base, engine, get_db
 from app.model import User, Device , Project, AuditLog
-from app.schema import UserCreate, UserResponse,UserListResponse,UserUpdate, UserStatusUpdate,ProfileUpdate,ChangePassword, DeviceCreate , DeviceResponse,DeviceListResponse,DeviceListResponseWrapper, ProjectCreate, ProjectResponse, ProjectUpdate, ProjectStatusUpdate
+from app.schema import UserCreate, UserResponse,UserListResponse,UserUpdate, UserStatusUpdate,ProfileUpdate,ChangePassword, DeviceCreate , DeviceResponse, DeviceDetailResponse , DeviceListResponse,DeviceListResponseWrapper, ProjectCreate, ProjectResponse, ProjectUpdate, ProjectStatusUpdate
 from sqlalchemy.orm import Session
+from sqlalchemy import func
+from datetime import datetime, date
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from jose import JWTError
 from app.auth import create_access_token, get_current_user, require_roles
+from app.github import get_github_repositories
 
-from app.security import hash_password, verify_password ,encrypt_device_password
+from app.security import hash_password, verify_password ,encrypt_device_password,decrypt_device_password
 
 Base.metadata.create_all(bind=engine)
 
@@ -25,7 +28,7 @@ app.add_middleware(
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "http://localhost:5174",
-        "http://localhost:5174",
+        
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -144,6 +147,120 @@ def get_users(
             "has_previous": page > 1
         }
     }
+
+
+
+
+
+
+
+@app.get("/users/assignable")
+def get_assignable_users(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(
+        require_roles("ADMIN", "SUPER_ADMIN")
+    )
+):
+    users = (
+        db.query(User)
+        .filter(User.is_active == True)
+        .order_by(User.name.asc(), User.email.asc())
+        .all()
+    )
+
+    return [
+        {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email,
+            "is_active":user.is_active,
+        }
+        for user in users
+    ]
+
+@app.get("/users/summary")
+def get_user_summary(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(
+        require_roles("ADMIN", "SUPER_ADMIN")
+    )
+):
+    total_users = db.query(User).count()
+
+    active_users = (
+        db.query(User)
+        .filter(User.is_active == True)
+        .count()
+    )
+
+    inactive_users = (
+        db.query(User)
+        .filter(User.is_active == False)
+        .count()
+    )
+
+    total_admins = db.query(User).filter(User.role == "Admin").count()
+
+    return {
+        "total_users": total_users,
+        "active_users": active_users,
+        "inactive_users": inactive_users,
+        "total_admins": total_admins
+    }
+
+
+@app.get("/users/all")
+def get_all_users(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(
+        require_roles("ADMIN", "SUPER_ADMIN")
+    )
+):
+    users = (
+        db.query(User)
+        .order_by(User.name.asc(), User.email.asc())
+        .all()
+    )
+
+    return [
+        {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email,
+            "is_active": user.is_active,
+        }
+        for user in users
+    ]
+
+    
+
+@app.get("/users/{user_id}")
+def get_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(
+        require_roles("ADMIN", "SUPER_ADMIN")
+    )
+):
+    user = (
+        db.query(User)
+        .filter(User.id == user_id)
+        .first()
+    )
+
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
+
+    return {
+        "id": user.id,
+        "name": user.name,
+        "email": user.email,
+        "is_active": user.is_active,
+    }
+    
 
 @app.put("/users/{user_id}")
 def update_user(user_id : int, userdata : UserUpdate, db: Session = Depends(get_db), current_user: dict = Depends(require_roles("ADMIN","SUPER_ADMIN"))):
@@ -391,6 +508,7 @@ def create_device(
         password_encrypted=encrypted_password,
         comments=device_data.comments,
         device_status=device_data.device_status,
+        device_condition=device_data.device_condition,
         created_by=current_user["user_id"],
         updated_by=current_user["user_id"]
     )
@@ -401,12 +519,56 @@ def create_device(
 
     return new_device
 
+@app.get("/devices/summary")
+def get_device_summary(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(
+        require_roles("USER", "ADMIN", "SUPER_ADMIN")
+    )
+):
+    total_devices = db.query(Device).count()
+
+    active_devices = db.query(Device).filter(
+        Device.device_status == "Active"
+    ).count()
+
+    inactive_devices = db.query(Device).filter(
+        Device.device_status == "Inactive"
+    ).count()
+
+    reachable_devices = db.query(Device).filter(
+        Device.device_condition == "Reachable"
+    ).count()
+
+    unreachable_devices = db.query(Device).filter(
+        Device.device_condition == "Unreachable"
+    ).count()
+
+    switched_off_devices = db.query(Device).filter(
+        Device.device_condition == "Switched Off"
+    ).count()
+
+    unused_devices = db.query(Device).filter(
+        Device.device_condition == "Unused"
+    ).count()
+
+    return {
+        "total_devices": total_devices,
+        "active_devices": active_devices,
+        "inactive_devices": inactive_devices,
+        "reachable_devices": reachable_devices,
+        "unreachable_devices": unreachable_devices,
+        "switched_off_devices": switched_off_devices,
+        "unused_devices": unused_devices,
+    }
+
 @app.get("/devices/",response_model=DeviceListResponseWrapper)
 def get_devices(
     page: int = 1,
     limit: int = 20,
     search: str | None = None,
     device_status: str | None = None,
+    device_condition: str | None = None,
     db: Session = Depends(get_db),
     current_user: dict = Depends(
         require_roles("USER", "ADMIN", "SUPER_ADMIN")
@@ -437,6 +599,13 @@ def get_devices(
         query = query.filter(
             Device.device_status == device_status
         )
+    
+    # Filter by device condition
+    # Filter by device condition
+    if device_condition:
+      query = query.filter(
+        Device.device_condition == device_condition
+    )
 
     total = query.count()
 
@@ -463,7 +632,11 @@ def get_devices(
         }
     }
 
-@app.get("/devices/{device_id}", response_model=DeviceResponse)
+
+@app.get(
+    "/devices/{device_id}",
+    response_model=DeviceDetailResponse
+)
 def get_device(
     device_id: int,
     db: Session = Depends(get_db),
@@ -481,7 +654,34 @@ def get_device(
             detail="Device not found"
         )
 
-    return device
+    # Normal users do NOT receive the password
+    password = None
+
+    # Only ADMIN and SUPER_ADMIN can receive decrypted password
+    if current_user["role"] in ["ADMIN", "SUPER_ADMIN"]:
+        password = decrypt_device_password(
+            device.password_encrypted
+        )
+
+    return {
+        "id": device.id,
+        "device_name": device.device_name,
+        "host": device.host,
+        "port": device.port,
+        "connection_type": device.connection_type,
+        "username": device.username,
+        "password": password,
+        "comments": device.comments,
+        "device_status": device.device_status,
+        "device_condition": device.device_condition,
+        "created_at": device.created_at,
+        "updated_at": device.updated_at,
+        "created_by": device.created_by,
+        "updated_by": device.updated_by
+        
+    }
+
+
 
 @app.put("/devices/{device_id}", response_model=DeviceResponse)
 def update_device(
@@ -505,10 +705,16 @@ def update_device(
     device.port = device_data.port
     device.connection_type = device_data.connection_type
     device.username = device_data.username
-    device.password_encrypted = encrypted_password
     device.comments = device_data.comments
     device.device_status = device_data.device_status
+    device.device_condition = device_data.device_condition
     device.updated_by = current_user["user_id"]
+
+     # Only update password when a new password was entered
+    if device_data.password:
+        device.password_encrypted = encrypt_device_password(
+            device_data.password
+        )
 
     db.commit()
     db.refresh(device)
@@ -549,6 +755,16 @@ def create_project(
             detail="Selected device is not active"
         )
 
+    existing_project = db.query(Project).filter(
+        Project.project_name == project_data.project_name
+    ).first()
+
+    if existing_project:
+        raise HTTPException(
+            status_code=400,
+            detail="Project name already exists"
+        )
+
     new_project = Project(
         project_name=project_data.project_name,
         repo_name=project_data.repo_name,
@@ -560,7 +776,7 @@ def create_project(
         project_path=project_data.project_path,
         deployment_script_path=project_data.deployment_script_path,
         tech_stack=project_data.tech_stack,
-        project_status=project_data.project_status,
+        project_status="Pending",
         created_by=current_user["user_id"],
         updated_by=current_user["user_id"]
     )
@@ -595,6 +811,22 @@ def get_projects(
         )
 
     query = db.query(Project)
+
+
+    # Automatically mark expired non-completed projects as Overdue
+    today = date.today()
+
+    db.query(Project).filter(
+      Project.project_status == "Pending",
+      Project.deadline < today
+    ).update(
+      {
+        Project.project_status: "Overdue"
+      },
+      synchronize_session=False
+    )
+
+    db.commit()
 
     # Search by project name
     if search:
@@ -744,10 +976,9 @@ def update_project_status(
         )
 
     allowed_statuses = {
-        "Active",
+        "Pending",
         "Completed",
-        "On Hold",
-        "Archived"
+        "Overdue",
     }
 
     if status_data.project_status not in allowed_statuses:
@@ -787,3 +1018,289 @@ def delete_project(
     return {
         "message": "Project deleted successfully"
     }
+
+
+@app.get("/dashboard/summary")
+def get_dashboard_summary(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(
+        require_roles("USER", "ADMIN", "SUPER_ADMIN")
+    )
+):
+    from datetime import date
+    today= date.today()
+    
+    db.query(Project).filter(
+    Project.project_status == "Pending",
+    Project.deadline < today
+    ).update(
+      {
+         Project.project_status: "Overdue"
+    
+      },
+      synchronize_session=False
+    )
+
+    db.commit()
+
+    # =========================
+    # PROJECT SUMMARY
+    # =========================
+
+    total_projects = (
+        db.query(func.count(Project.id))
+        .scalar()
+        or 0
+    )
+
+ 
+
+    completed_projects = (
+        db.query(func.count(Project.id))
+        .filter(Project.project_status == "Completed")
+        .scalar()
+        or 0
+    )
+
+    pending_projects = (
+       db.query(func.count(Project.id))
+       .filter(Project.project_status == "Pending")
+       .scalar()
+       or 0
+   )
+
+    overdue_projects = (
+      db.query(func.count(Project.id))
+      .filter(Project.project_status == "Overdue")
+      .scalar()
+      or 0
+    ) 
+
+
+    
+
+
+    # =========================
+    # DEVICE SUMMARY
+    # =========================
+
+    total_devices = (
+        db.query(func.count(Device.id))
+        .scalar()
+        or 0
+    )
+
+    active_devices = (
+        db.query(func.count(Device.id))
+        .filter(Device.device_status == "Active")
+        .scalar()
+        or 0
+    )
+
+    inactive_devices = (
+        db.query(func.count(Device.id))
+        .filter(Device.device_status == "Inactive")
+        .scalar()
+        or 0
+    )
+
+    reachable_devices = (
+        db.query(func.count(Device.id))
+        .filter(Device.device_condition == "Reachable")
+        .scalar()
+        or 0
+    )
+
+    unreachable_devices = (
+        db.query(func.count(Device.id))
+        .filter(Device.device_condition == "Unreachable")
+        .scalar()
+        or 0
+    )
+
+    switched_off_devices = (
+        db.query(func.count(Device.id))
+        .filter(Device.device_condition == "Switched Off")
+        .scalar()
+        or 0
+    )
+
+    unused_devices = (
+        db.query(func.count(Device.id))
+        .filter(Device.device_condition == "Unused")
+        .scalar()
+        or 0
+    )
+
+
+    # =========================
+    # RETURN DASHBOARD SUMMARY
+    # =========================
+
+    return {
+        
+
+        "projects": {
+            "total": total_projects,
+            "pending": pending_projects,
+            "completed": completed_projects,
+            "overdue": overdue_projects,
+        },
+
+        "devices": {
+            "total": total_devices,
+            "active": active_devices,
+            "inactive": inactive_devices,
+            "reachable": reachable_devices,
+            "unreachable": unreachable_devices,
+            "switched_off": switched_off_devices,
+            "unused": unused_devices,
+        },
+    }
+
+
+@app.get("/dashboard/project-monthly")
+def get_project_monthly(
+    year: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(
+        require_roles("USER", "ADMIN", "SUPER_ADMIN")
+    )
+):
+    from datetime import date
+    import calendar
+
+    months = []
+
+    projects = (
+        db.query(Project)
+        .all()
+    )
+
+    for month in range(1, 13):
+
+        completed = 0
+        pending = 0
+        overdue = 0
+
+        for project in projects:
+
+            # Completed projects
+            if (
+                project.project_status == "Completed"
+                and project.updated_at.year == year
+                and project.updated_at.month == month
+            ):
+                completed += 1
+
+            # Pending projects
+            elif (
+                project.project_status == "Pending"
+                and project.start_date.year == year
+                and project.start_date.month == month
+            ):
+                pending += 1
+
+            # Overdue projects
+            elif (
+                project.project_status == "Overdue"
+                and project.deadline.year == year
+                and project.deadline.month == month
+            ):
+                overdue += 1
+
+        months.append({
+            "month": calendar.month_abbr[month],
+            "pending": pending,
+            "completed": completed,
+            "overdue": overdue
+        })
+
+    return {
+        "year": year,
+        "months": months
+    }
+
+
+@app.get("/dashboard/device-monthly")
+def get_device_monthly(
+    year: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(
+        require_roles("USER", "ADMIN", "SUPER_ADMIN")
+    )
+):
+    import calendar
+
+    months = []
+
+    devices = (
+        db.query(Device)
+        .all()
+    )
+
+    for month in range(1, 13):
+
+        active = 0
+        inactive = 0
+        reachable = 0
+        unreachable = 0
+        switched_off = 0
+        unused = 0
+
+        for device in devices:
+
+            # Use updated_at to determine the month
+            if (
+                device.updated_at.year == year
+                and device.updated_at.month == month
+            ):
+
+                if device.device_status == "Active":
+                    active += 1
+
+                elif device.device_status == "Inactive":
+                    inactive += 1
+
+                if device.device_condition == "Reachable":
+                    reachable += 1
+
+                elif device.device_condition == "Unreachable":
+                    unreachable += 1
+
+                elif device.device_condition == "Switched Off":
+                    switched_off += 1
+
+                elif device.device_condition == "Unused":
+                    unused += 1
+
+        months.append({
+            "month": calendar.month_abbr[month],
+            "active": active,
+            "inactive": inactive,
+            "reachable": reachable,
+            "unreachable": unreachable,
+            "switched_off": switched_off,
+            "unused": unused
+        })
+
+    return {
+        "year": year,
+        "months": months
+    }
+
+
+@app.get("/github/repositories")
+def get_github_repositories_endpoint(
+    current_user: dict = Depends(
+        require_roles("ADMIN", "SUPER_ADMIN")
+    )
+):
+    try:
+        return get_github_repositories()
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )

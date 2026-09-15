@@ -27,8 +27,15 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    if (error.response?.status === 401) {
+    const requestUrl = error.config?.url || "";
+
+    // Do not redirect when the login request itself returns 401.
+    if (
+      error.response?.status === 401 &&
+      !requestUrl.includes("/api/v1/auth/login")
+    ) {
       localStorage.removeItem("access_token");
+      localStorage.removeItem("user");
 
       window.location.href = "/login";
     }

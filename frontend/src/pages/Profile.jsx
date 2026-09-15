@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../api/axios";
+import PageHeader from "../components/UI/PageHeader";
 
 function Profile() {
   const [profile, setProfile] = useState(null);
@@ -212,58 +213,53 @@ function Profile() {
   };
 
   // =========================
-  // LOADING
-  // =========================
+// LOADING
+// =========================
 
-  if (loading) {
-    return (
-      <div className="profile-page">
-        <h1>Profile</h1>
-        <p>Loading profile...</p>
-      </div>
-    );
-  }
-
-  // =========================
-  // PAGE
-  // =========================
-
+if (loading) {
   return (
-    <div className="profile-page">
+    <div className="page-container">
+      <PageHeader
+        title="Profile"
+        description="Manage your profile information."
+      />
 
-      {/* Page Header */}
+      <p>Loading profile...</p>
+    </div>
+  );
+}
 
-      <div className="page-header">
-        <div>
-          <h1>Profile</h1>
+// =========================
+// PAGE
+// =========================
 
-          <p>
-            Manage your account information
-          </p>
-        </div>
+return (
+  <div className="page-container">
+
+    <PageHeader
+      title="Profile"
+      description="Manage your profile information."
+    />
+
+    {/* Error */}
+
+    {error && (
+      <div className="error-message">
+        {error}
       </div>
+    )}
 
+    {/* Success */}
 
-      {/* Error */}
+    {success && (
+      <div className="success-message">
+        {success}
+      </div>
+    )}
 
-      {error && (
-        <div className="error-message">
-          {error}
-        </div>
-      )}
+    {profile && (
+      <>
 
-
-      {/* Success */}
-
-      {success && (
-        <div className="success-message">
-          {success}
-        </div>
-      )}
-
-
-      {profile && (
-        <>
 
           {/* =========================
               ACCOUNT INFORMATION

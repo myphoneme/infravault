@@ -35,8 +35,15 @@ function DeviceDetails() {
   };
 
   if (loading) {
-    return <h2>Loading device...</h2>;
-  }
+  return (
+    <div className="device-page">
+      <div className="device-loading">
+        <div className="loading-spinner"></div>
+        <span>Loading device...</span>
+      </div>
+    </div>
+  );
+}
 
   if (error) {
     return (
@@ -74,7 +81,7 @@ function DeviceDetails() {
           className="secondary-button"
           onClick={() => navigate("/devices")}
         >
-          ← Back to Devices
+          ←
         </button>
 
       </div>
@@ -115,6 +122,17 @@ function DeviceDetails() {
             </tr>
 
             <tr>
+              <th>Password</th>
+                <td>
+                  {device.password ? (
+                   <span>{device.password}</span>
+                  ) : (
+                    <span>••••••••</span>
+                  )}
+                </td>
+            </tr>
+
+            <tr>
               <th>Status</th>
               <td>
                 <span
@@ -127,6 +145,19 @@ function DeviceDetails() {
                   {device.device_status}
                 </span>
               </td>
+            </tr>
+
+            <tr>
+              <th>Device Status</th>
+              <td>
+                <span
+                   className={`condition-${device.device_condition
+                   ?.toLowerCase()
+                   .replaceAll(" ", "-")}`}
+           >
+                  {device.device_condition || "-"}
+                </span>
+             </td>
             </tr>
 
             <tr>

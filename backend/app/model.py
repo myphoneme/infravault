@@ -111,6 +111,12 @@ class Device(Base):
         default="Active"
     )
 
+    device_condition: Mapped[str] = mapped_column(
+    String(50),
+    nullable=False,
+    default="Unused"
+   )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=datetime.utcnow,
@@ -200,7 +206,7 @@ class Project(Base):
     project_status: Mapped[str] = mapped_column(
         String(50),
         nullable=False,
-        default="Active"
+        default="Pending"
     )
 
     created_at: Mapped[datetime] = mapped_column(

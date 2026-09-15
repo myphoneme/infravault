@@ -95,7 +95,7 @@ function ProjectDetails() {
           className="secondary-button"
           onClick={() => navigate("/projects")}
         >
-          ← Back to Projects
+          ← 
         </button>
       </div>
 

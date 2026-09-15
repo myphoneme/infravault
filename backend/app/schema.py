@@ -1,5 +1,9 @@
 from pydantic import BaseModel
 from datetime import datetime, date
+from typing import Literal
+
+
+ProjectStatus = Literal["Pending", "Completed", "Overdue"]
 
 
 class UserBase(BaseModel):
@@ -66,6 +70,7 @@ class DeviceBase(BaseModel):
     username: str
     comments: str | None = None
     device_status: str = "Active"
+    device_condition: str = "Unused"
 
 
 class DeviceCreate(DeviceBase):
@@ -82,6 +87,9 @@ class DeviceResponse(DeviceBase):
     class Config:
         from_attributes = True
 
+class DeviceDetailResponse(DeviceResponse):
+    password: str | None = None
+
 class DeviceListResponse(BaseModel):
     id: int
     device_name: str
@@ -91,6 +99,7 @@ class DeviceListResponse(BaseModel):
     username: str
     comments: str | None = None
     device_status: str
+    device_condition: str
     created_at: datetime
     updated_at: datetime
     created_by: int | None = None
@@ -124,7 +133,7 @@ class ProjectBase(BaseModel):
     project_path: str
     deployment_script_path: str | None = None
     tech_stack: str
-    project_status: str = "Active"
+    project_status: ProjectStatus = "Pending"
 
 
 class ProjectCreate(ProjectBase):
@@ -134,7 +143,7 @@ class ProjectUpdate(ProjectBase):
     pass
 
 class ProjectStatusUpdate(BaseModel):
-    project_status: str
+    project_status: ProjectStatus 
 
 
 class ProjectResponse(ProjectBase):

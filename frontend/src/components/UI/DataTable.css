@@ -1,0 +1,76 @@
+/* =========================================================
+   DATA TABLE
+========================================================= */
+
+.data-table-card {
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.data-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 900px;
+}
+
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.data-table thead th {
+  padding: 12px 14px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #d1d5db;
+
+  color: #374151;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+
+
+/* =========================================================
+   BODY
+========================================================= */
+
+.data-table tbody td {
+  padding: 8px 14px;
+  border-bottom: 1px solid #e5e7eb;
+
+  color: #111827;
+  font-size: 16px;
+  vertical-align: middle;
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.data-table tbody tr:hover {
+  background: #fafafa;
+}
+
+
+/* =========================================================
+   EMPTY STATE
+========================================================= */
+
+.data-table-empty {
+  margin: 0;
+  padding: 28px 20px;
+
+  color: #6b7280;
+  font-size: 14px;
+  text-align: center;
+}

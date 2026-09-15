@@ -1,4 +1,6 @@
 import { createPortal } from "react-dom";
+import{Eye, EyeOff} from "lucide-react";
+import { useState } from "react";
 
 function DeviceForm({
   formData,
@@ -7,7 +9,15 @@ function DeviceForm({
   onChange,
   onSubmit,
   onCancel,
-}) {
+  confirmPassword,
+  setConfirmPassword,
+})
+
+
+
+{
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const modal = (
     <div
   className="modal-overlay"
@@ -102,16 +112,68 @@ function DeviceForm({
               />
             </div>
 
-            <div className="form-group">
-              <label>Password</label>
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={onChange}
-                required={!editingDevice}
-              />
-            </div>
+             <div className="form-group">
+               <label>Password</label>
+
+               <div className="password-input-wrapper">
+                  <input
+                     type={showPassword ? "text" : "password"}
+                     name="password"
+                     value={formData.password}
+                     onChange={onChange}
+                    required={!editingDevice}
+                  />
+
+                  <button
+                     type="button"
+                     className="password-toggle"
+                     onClick={() => setShowPassword((previous) => !previous)}
+                  >
+                     {showPassword ? (
+                        <EyeOff size={18} />
+                      ) : (
+                        <Eye size={18} />
+                      )}
+                  </button>
+                </div>
+              </div>
+
+            {!editingDevice && (
+  <div className="form-group">
+    <label>Confirm Password</label>
+
+    <div className="password-input-wrapper">
+      <input
+        type={showConfirmPassword ? "text" : "password"}
+        name="confirmPassword"
+        value={confirmPassword}
+        onChange={(e) => setConfirmPassword(e.target.value)}
+        required
+      />
+
+      <button
+        type="button"
+        className="password-toggle"
+        onClick={() =>
+          setShowConfirmPassword((previous) => !previous)
+        }
+      >
+        {showConfirmPassword ? (
+          <EyeOff size={18} />
+        ) : (
+          <Eye size={18} />
+        )}
+      </button>
+    </div>
+
+    {confirmPassword &&
+      formData.password !== confirmPassword && (
+        <small className="password-error">
+          Passwords do not match.
+        </small>
+      )}
+  </div>
+)}
 
             <div className="form-group">
               <label>Status</label>
@@ -123,6 +185,21 @@ function DeviceForm({
                 <option value="Active">Active</option>
                 <option value="Inactive">Inactive</option>
               </select>
+            </div>
+
+            <div className="form-group">
+  
+            <label>Device Status</label>
+            <select
+            name="device_condition"
+            value={formData.device_condition}
+            onChange={onChange}
+            >
+    <          option value="Reachable">Reachable</option>
+               <option value="Unreachable">Unreachable</option>
+               <option value="Switched Off">Switched Off</option>
+               <option value="Unused">Unused</option>
+             </select>
             </div>
 
             <div className="form-group full-width">
