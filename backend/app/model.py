@@ -70,6 +70,11 @@ class Device(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
 
+    device_category_id: Mapped[int] = mapped_column(
+    Integer,
+    nullable=False
+    )
+
     device_name: Mapped[str] = mapped_column(
         String(255),
         nullable=False
@@ -99,6 +104,20 @@ class Device(Base):
         String(255),
         nullable=False
     )
+
+    password_changed_at: Mapped[datetime] = mapped_column(
+    DateTime,
+    default=datetime.utcnow,
+    nullable=False
+
+    )
+
+    password_rotation_days: Mapped[int | None] = mapped_column(
+    Integer,
+    nullable=True
+
+    )
+    
 
     comments: Mapped[str | None] = mapped_column(
         Text,
@@ -139,6 +158,87 @@ class Device(Base):
         Integer,
         nullable=True
     )
+
+
+class DeviceCategory(Base):
+    __tablename__ = "device_category_master"
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    category_name: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+        unique=True
+    )
+
+    default_rotation_days: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=90
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
+
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False
+    )
+
+    created_by: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True
+    )
+
+    updated_by: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True
+    )
+
+
+
+class DevicePasswordNotification(Base):
+    __tablename__ = "device_password_notifications"
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    device_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("device_master.id"),
+        nullable=False,
+        index=True
+    )
+
+    password_cycle_started_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False
+    )
+
+    checkpoint: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
+
+    
 
 
 

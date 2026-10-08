@@ -601,32 +601,8 @@ tr:hover {
 }
 
 
-/* Action buttons in tables */
-.action-buttons {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  white-space: nowrap;
-}
 
-.action-buttons button {
-  width: 70px;
-  height: 36px;
-  padding: 0;
-  margin: 0;
-  box-sizing: border-box;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
 
-.view-button {
-  background: #6b7280;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
 
 .logout-button {
   width: 100%;

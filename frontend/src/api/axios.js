@@ -15,6 +15,12 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
+  // Allow browser/Axios to set multipart Content-Type
+    // and its boundary for file uploads.
+    if (config.data instanceof FormData) {
+      delete config.headers["Content-Type"];
+    }  
+
     return config;
   },
   (error) => {

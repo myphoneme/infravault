@@ -1,0 +1,53 @@
+.action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  margin: 0;
+  padding: 0;
+}
+
+.action-button {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  margin: 0;
+
+  border: none;
+  background: transparent;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  cursor: pointer;
+  font-size: 15px;
+}
+
+.action-button:hover {
+  opacity: 0.7;
+}
+
+.action-view {
+  color: #6b7280;
+}
+
+.action-edit {
+  color: #f59e0b;
+}
+
+.action-delete {
+  color: #dc2626;
+}
+
+.action-activate {
+  color:#dc2626;
+}
+
+.action-deactivate {
+  color: #16a34a
+}
+
+.action-change-password {
+  color: #2563eb;
+}

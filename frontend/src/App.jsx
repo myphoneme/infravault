@@ -11,6 +11,8 @@ import ProjectDetails from "./pages/Projects/ProjectDetails";
 import Login from "./pages/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Profile from "./pages/Profile";
+import DeviceCategories from "./pages/DeviceCategories";
+import DeviceImport from "./pages/Devices/DeviceImport";
 
 function App() {
   return (
@@ -33,6 +35,16 @@ function App() {
           <Route path="profile" element={<Profile />} />
           <Route path="users" element={<Users />} />
           <Route path="devices" element={<Devices />} />
+
+          <Route
+            path="devices/import"
+            element={<DeviceImport />}
+          />
+
+          <Route
+            path="device-categories"
+            element={<DeviceCategories />}
+          />
 
           <Route
             path="devices/:deviceId"

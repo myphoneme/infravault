@@ -1,14 +1,16 @@
 .searchable-select {
-  position: relative;
+
+   position: relative;
   width: 100%;
 }
 
 .searchable-select-trigger {
   width: 100%;
-  min-height: 42px;
-  padding: 10px 12px;
+  height: 38px;
+  box-sizing: border-box;
+  padding: 10px;
   border: 1px solid #d1d5db;
-  border-radius: 8px;
+  border-radius: 5px;
   background: #ffffff;
   display: flex;
   align-items: center;

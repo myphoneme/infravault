@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
+
 import api from "../api/axios";
 import PageHeader from "../components/UI/PageHeader";
+import FormModal from "../components/UI/FormModal";
 
 function Profile() {
   const [profile, setProfile] = useState(null);
@@ -11,6 +14,15 @@ function Profile() {
 
   const [editing, setEditing] = useState(false);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
+
+  const [showCurrentPassword, setShowCurrentPassword] =
+    useState(false);
+
+  const [showNewPassword, setShowNewPassword] =
+    useState(false);
+
+  const [showConfirmPassword, setShowConfirmPassword] =
+    useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -181,6 +193,11 @@ function Profile() {
         confirm_password: "",
       });
 
+      // Reset password visibility
+      setShowCurrentPassword(false);
+      setShowNewPassword(false);
+      setShowConfirmPassword(false);
+
       // Close modal
       setShowPasswordForm(false);
 
@@ -206,6 +223,10 @@ function Profile() {
       confirm_password: "",
     });
 
+    setShowCurrentPassword(false);
+    setShowNewPassword(false);
+    setShowConfirmPassword(false);
+
     setShowPasswordForm(false);
 
     setError("");
@@ -213,53 +234,52 @@ function Profile() {
   };
 
   // =========================
-// LOADING
-// =========================
+  // LOADING
+  // =========================
 
-if (loading) {
+  if (loading) {
+    return (
+      <div className="page-container">
+        <PageHeader
+          title="Profile"
+          description="Manage your profile information."
+        />
+
+        <p>Loading profile...</p>
+      </div>
+    );
+  }
+
+  // =========================
+  // PAGE
+  // =========================
+
   return (
     <div className="page-container">
+
       <PageHeader
         title="Profile"
         description="Manage your profile information."
       />
 
-      <p>Loading profile...</p>
-    </div>
-  );
-}
+      {/* Error */}
 
-// =========================
-// PAGE
-// =========================
+      {error && (
+        <div className="error-message">
+          {error}
+        </div>
+      )}
 
-return (
-  <div className="page-container">
+      {/* Success */}
 
-    <PageHeader
-      title="Profile"
-      description="Manage your profile information."
-    />
+      {success && (
+        <div className="success-message">
+          {success}
+        </div>
+      )}
 
-    {/* Error */}
-
-    {error && (
-      <div className="error-message">
-        {error}
-      </div>
-    )}
-
-    {/* Success */}
-
-    {success && (
-      <div className="success-message">
-        {success}
-      </div>
-    )}
-
-    {profile && (
-      <>
-
+      {profile && (
+        <>
 
           {/* =========================
               ACCOUNT INFORMATION
@@ -281,223 +301,93 @@ return (
 
             </div>
 
+            <div className="profile-grid">
 
-            {!editing ? (
+              {/* Name */}
 
-              <>
-                <div className="profile-grid">
+              <div className="profile-field">
 
-                  {/* Name */}
+                <label>
+                  Name
+                </label>
 
-                  <div className="profile-field">
-
-                    <label>
-                      Name
-                    </label>
-
-                    <div className="profile-value">
-                      {profile.name}
-                    </div>
-
-                  </div>
-
-
-                  {/* Email */}
-
-                  <div className="profile-field">
-
-                    <label>
-                      Email
-                    </label>
-
-                    <div className="profile-value">
-                      {profile.email}
-                    </div>
-
-                  </div>
-
-
-                  {/* Role */}
-
-                  <div className="profile-field">
-
-                    <label>
-                      Role
-                    </label>
-
-                    <div className="profile-value">
-                      {profile.role}
-                    </div>
-
-                  </div>
-
-
-                  {/* Status */}
-
-                  <div className="profile-field">
-
-                    <label>
-                      Status
-                    </label>
-
-                    <div className="profile-value">
-
-                      <span
-                        className={`status-badge ${
-                          profile.is_active
-                            ? "status-active"
-                            : "status-inactive"
-                        }`}
-                      >
-                        {profile.is_active
-                          ? "● Active"
-                          : "● Inactive"}
-                      </span>
-
-                    </div>
-
-                  </div>
-
+                <div className="profile-value">
+                  {profile.name}
                 </div>
 
+              </div>
 
-                {/* Actions */}
+              {/* Email */}
 
-                <div className="profile-actions">
+              <div className="profile-field">
 
-                  <button
-                    type="button"
-                    className="primary-button"
-                    onClick={handleEdit}
+                <label>
+                  Email
+                </label>
+
+                <div className="profile-value">
+                  {profile.email}
+                </div>
+
+              </div>
+
+              {/* Role */}
+
+              <div className="profile-field">
+
+                <label>
+                  Role
+                </label>
+
+                <div className="profile-value">
+                  {profile.role}
+                </div>
+
+              </div>
+
+              {/* Status */}
+
+              <div className="profile-field">
+
+                <label>
+                  Status
+                </label>
+
+                <div className="profile-value">
+
+                  <span
+                    className={`status-badge ${
+                      profile.is_active
+                        ? "status-active"
+                        : "status-inactive"
+                    }`}
                   >
-                    Edit Profile
-                  </button>
+                    {profile.is_active
+                      ? "● Active"
+                      : "● Inactive"}
+                  </span>
 
                 </div>
 
-              </>
+              </div>
 
-            ) : (
+            </div>
 
-              <form onSubmit={handleSubmit}>
+            {/* Actions */}
 
-                <div className="profile-grid">
+            <div className="profile-actions">
 
-                  {/* Name */}
+              <button
+                type="button"
+                className="primary-button"
+                onClick={handleEdit}
+              >
+                Edit Profile
+              </button>
 
-                  <div className="profile-field">
-
-                    <label htmlFor="profile-name">
-                      Name
-                    </label>
-
-                    <input
-                      id="profile-name"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleChange}
-                      required
-                    />
-
-                  </div>
-
-
-                  {/* Email */}
-
-                  <div className="profile-field">
-
-                    <label htmlFor="profile-email">
-                      Email
-                    </label>
-
-                    <input
-                      id="profile-email"
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleChange}
-                      required
-                    />
-
-                  </div>
-
-
-                  {/* Role */}
-
-                  <div className="profile-field">
-
-                    <label>
-                      Role
-                    </label>
-
-                    <div className="profile-value">
-                      {profile.role}
-                    </div>
-
-                  </div>
-
-
-                  {/* Status */}
-
-                  <div className="profile-field">
-
-                    <label>
-                      Status
-                    </label>
-
-                    <div className="profile-value">
-
-                      <span
-                        className={`status-badge ${
-                          profile.is_active
-                            ? "status-active"
-                            : "status-inactive"
-                        }`}
-                      >
-                        {profile.is_active
-                          ? "● Active"
-                          : "● Inactive"}
-                      </span>
-
-                    </div>
-
-                  </div>
-
-                </div>
-
-
-                {/* Edit Actions */}
-
-                <div className="profile-actions">
-
-                  <button
-                    type="submit"
-                    className="primary-button"
-                    disabled={saving}
-                  >
-                    {saving
-                      ? "Saving..."
-                      : "Save Changes"}
-                  </button>
-
-
-                  <button
-                    type="button"
-                    className="secondary-button"
-                    onClick={handleCancel}
-                    disabled={saving}
-                  >
-                    Cancel
-                  </button>
-
-                </div>
-
-              </form>
-
-            )}
+            </div>
 
           </div>
-
 
           {/* =========================
               SECURITY
@@ -521,7 +411,6 @@ return (
 
             </div>
 
-
             {/* Security Row */}
 
             <div className="security-row">
@@ -538,13 +427,23 @@ return (
 
               </div>
 
-
               <button
                 type="button"
                 className="secondary-button"
                 onClick={() => {
                   setError("");
                   setSuccess("");
+
+                  setPasswordData({
+                    current_password: "",
+                    new_password: "",
+                    confirm_password: "",
+                  });
+
+                  setShowCurrentPassword(false);
+                  setShowNewPassword(false);
+                  setShowConfirmPassword(false);
+
                   setShowPasswordForm(true);
                 }}
               >
@@ -555,171 +454,279 @@ return (
 
           </div>
 
+          {/* =========================
+              EDIT PROFILE MODAL
+              ========================= */}
+
+          {editing && (
+            <FormModal
+              title="Edit Profile"
+              subtitle="Update your profile information"
+              onClose={handleCancel}
+              onSubmit={handleSubmit}
+              saving={saving}
+              submitText="Save Changes"
+              savingText="Saving..."
+            >
+              <div className="form-grid">
+
+                {/* Name */}
+
+                <div className="form-group">
+
+                  <label htmlFor="profile-name">
+                    Name
+                  </label>
+
+                  <input
+                    id="profile-name"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    required
+                  />
+
+                </div>
+
+                {/* Email */}
+
+                <div className="form-group">
+
+                  <label htmlFor="profile-email">
+                    Email
+                  </label>
+
+                  <input
+                    id="profile-email"
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    required
+                  />
+
+                </div>
+
+
+          {/* Role */}
+
+          <div className="form-group">
+
+            <label htmlFor="profile-role">
+              Role
+            </label>
+
+            <input
+              id="profile-role"
+              type="text"
+              value={profile.role}
+              readOnly
+            />
+
+          </div>
+
+          {/* Status */}
+
+          <div className="form-group">
+
+            <label htmlFor="profile-status">
+              Status
+            </label>
+
+            <input
+              id="profile-status"
+              type="text"
+              value={
+                profile.is_active
+                  ? "Active"
+                  : "Inactive"
+              }
+              readOnly
+            />
+
+          </div>
+
+              </div>
+            </FormModal>
+          )}
 
           {/* =========================
               CHANGE PASSWORD MODAL
               ========================= */}
 
           {showPasswordForm && (
-
-            <div
-              className="password-modal-overlay"
-              onClick={handlePasswordCancel}
+            <FormModal
+              title="Change Password"
+              subtitle="Update your InfraVault account password"
+              onClose={handlePasswordCancel}
+              onSubmit={handlePasswordSubmit}
+              saving={changingPassword}
+              submitText="Change Password"
+              savingText="Changing..."
             >
+              <div className="form-grid">
 
-              <div
-                className="password-modal"
-                onClick={(event) =>
-                  event.stopPropagation()
-                }
-              >
+                {/* Current Password */}
 
-                {/* Modal Header */}
+                <div className="form-group full-width">
 
-                <div className="password-modal-header">
+                  <label htmlFor="current-password">
+                    Current Password
+                  </label>
 
-                  <div>
+                  <div className="password-input-wrapper">
 
-                    <h2>
-                      Change Password
-                    </h2>
-
-                    <p>
-                      Update your InfraVault
-                      account password
-                    </p>
-
-                  </div>
-
-
-                  <button
-                    type="button"
-                    className="modal-close-button"
-                    onClick={handlePasswordCancel}
-                    aria-label="Close"
-                  >
-                    ×
-                  </button>
-
-                </div>
-
-
-                {/* Password Form */}
-
-                <form
-                  onSubmit={handlePasswordSubmit}
-                >
-
-                  <div className="password-form">
-
-                    {/* Current Password */}
-
-                    <div className="profile-field">
-
-                      <label htmlFor="current-password">
-                        Current Password
-                      </label>
-
-                      <input
-                        id="current-password"
-                        type="password"
-                        name="current_password"
-                        value={
-                          passwordData.current_password
-                        }
-                        onChange={
-                          handlePasswordChange
-                        }
-                        required
-                      />
-
-                    </div>
-
-
-                    {/* New Password */}
-
-                    <div className="profile-field">
-
-                      <label htmlFor="new-password">
-                        New Password
-                      </label>
-
-                      <input
-                        id="new-password"
-                        type="password"
-                        name="new_password"
-                        value={
-                          passwordData.new_password
-                        }
-                        onChange={
-                          handlePasswordChange
-                        }
-                        required
-                      />
-
-                    </div>
-
-
-                    {/* Confirm Password */}
-
-                    <div className="profile-field">
-
-                      <label htmlFor="confirm-password">
-                        Confirm New Password
-                      </label>
-
-                      <input
-                        id="confirm-password"
-                        type="password"
-                        name="confirm_password"
-                        value={
-                          passwordData.confirm_password
-                        }
-                        onChange={
-                          handlePasswordChange
-                        }
-                        required
-                      />
-
-                    </div>
-
-                  </div>
-
-
-                  {/* Modal Actions */}
-
-                  <div className="profile-actions">
-
-                    <button
-                      type="submit"
-                      className="primary-button"
-                      disabled={changingPassword}
-                    >
-                      {changingPassword
-                        ? "Changing..."
-                        : "Change Password"}
-                    </button>
-
+                    <input
+                      id="current-password"
+                      type={
+                        showCurrentPassword
+                          ? "text"
+                          : "password"
+                      }
+                      name="current_password"
+                      value={
+                        passwordData.current_password
+                      }
+                      onChange={
+                        handlePasswordChange
+                      }
+                      required
+                    />
 
                     <button
                       type="button"
-                      className="secondary-button"
-                      onClick={
-                        handlePasswordCancel
+                      className="password-toggle"
+                      onClick={() =>
+                        setShowCurrentPassword(
+                          (previous) => !previous
+                        )
                       }
                       disabled={changingPassword}
+                      aria-label={
+                        showCurrentPassword
+                          ? "Hide current password"
+                          : "Show current password"
+                      }
                     >
-                      Cancel
+                      {showCurrentPassword ? (
+                        <EyeOff size={18} />
+                      ) : (
+                        <Eye size={18} />
+                      )}
                     </button>
 
                   </div>
 
-                </form>
+                </div>
+
+                {/* New Password */}
+
+                <div className="form-group full-width">
+
+                  <label htmlFor="new-password">
+                    New Password
+                  </label>
+
+                  <div className="password-input-wrapper">
+
+                    <input
+                      id="new-password"
+                      type={
+                        showNewPassword
+                          ? "text"
+                          : "password"
+                      }
+                      name="new_password"
+                      value={
+                        passwordData.new_password
+                      }
+                      onChange={
+                        handlePasswordChange
+                      }
+                      required
+                    />
+
+                    <button
+                      type="button"
+                      className="password-toggle"
+                      onClick={() =>
+                        setShowNewPassword(
+                          (previous) => !previous
+                        )
+                      }
+                      disabled={changingPassword}
+                      aria-label={
+                        showNewPassword
+                          ? "Hide new password"
+                          : "Show new password"
+                      }
+                    >
+                      {showNewPassword ? (
+                        <EyeOff size={18} />
+                      ) : (
+                        <Eye size={18} />
+                      )}
+                    </button>
+
+                  </div>
+
+                </div>
+
+                {/* Confirm New Password */}
+
+                <div className="form-group full-width">
+
+                  <label htmlFor="confirm-password">
+                    Confirm New Password
+                  </label>
+
+                  <div className="password-input-wrapper">
+
+                    <input
+                      id="confirm-password"
+                      type={
+                        showConfirmPassword
+                          ? "text"
+                          : "password"
+                      }
+                      name="confirm_password"
+                      value={
+                        passwordData.confirm_password
+                      }
+                      onChange={
+                        handlePasswordChange
+                      }
+                      required
+                    />
+
+                    <button
+                      type="button"
+                      className="password-toggle"
+                      onClick={() =>
+                        setShowConfirmPassword(
+                          (previous) => !previous
+                        )
+                      }
+                      disabled={changingPassword}
+                      aria-label={
+                        showConfirmPassword
+                          ? "Hide confirm password"
+                          : "Show confirm password"
+                      }
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff size={18} />
+                      ) : (
+                        <Eye size={18} />
+                      )}
+                    </button>
+
+                  </div>
+
+                </div>
 
               </div>
-
-            </div>
-
+            </FormModal>
           )}
 
         </>

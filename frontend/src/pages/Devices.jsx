@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect,useMemo,useRef, useState } from "react";
 
 import { createPortal } from "react-dom";
 import api from "../api/axios";
@@ -7,9 +7,11 @@ import SummaryCard from "../components/UI/SummaryCard";
 import SummaryCards from "../components/UI/SummaryCards";
 import SearchFilterBar from "../components/UI/SearchFilterBar";
 import PageHeader from "../components/UI/PageHeader";
+import Pagination from "../components/UI/Pagination";
 
 import DeviceList from "./Devices/DeviceList";
 import DeviceForm from "./Devices/DeviceForm";
+
 
 import {
   Server,
@@ -19,6 +21,8 @@ import {
   WifiOff,
   Power,
   PackageOpen,
+  Eye,
+  EyeOff
 } from "lucide-react";
 
 function Devices() {
@@ -41,6 +45,15 @@ function Devices() {
   const [success, setSuccess] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [viewingDevice, setViewingDevice] = useState(null);
+  const [changingPasswordDevice, setChangingPasswordDevice] = useState(null);
+const [newPassword, setNewPassword] = useState("");
+const [currentPassword, setCurrentPassword] = useState("");
+const [confirmNewPassword, setConfirmNewPassword] = useState("");
+const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+const [showNewPassword, setShowNewPassword] = useState(false);
+const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
+
+const [changingPassword, setChangingPassword] = useState(false); 
 
 const [pagination, setPagination] = useState({
   page: 1,
@@ -54,6 +67,9 @@ const [pagination, setPagination] = useState({
 const [search, setSearch] = useState("");
 const [statusFilter, setStatusFilter] = useState("");
 const [deviceConditionFilter, setDeviceConditionFilter] = useState("");
+const [deviceCategories, setDeviceCategories] = useState([]);
+const [dashboardHighlight, setDashboardHighlight] = useState(false);
+const devicesTableRef = useRef(null);
 
 const totalDevices = pagination.total;
 
@@ -91,18 +107,84 @@ const unusedDevices = devices.filter(
     connection_type: "SSH",
     username: "",
     password: "",
+    device_category_id: "",
+    password_rotation_days: "",
     comments: "",
     device_status: "Active",
     device_condition: "Unused",
   });
 
   const [confirmPassword, setConfirmPassword] = useState("");
+
+
+const handleChangePassword = (device) => {
+  setChangingPasswordDevice(device);
+
+  setCurrentPassword("");
+  setNewPassword("");
+  setConfirmNewPassword("");
+
+  setShowCurrentPassword(false);
+  setShowNewPassword(false);
+  setShowConfirmNewPassword(false);
+
+  setError("");
+  setSuccess("");
+};
   
 
   useEffect(() => {
-    fetchDevices();
+    const params = new URLSearchParams(
+      window.location.search
+    );
+
+    const dashboardMode =
+      params.get("dashboard") === "true";
+
+    if (dashboardMode) {
+      setDashboardHighlight(true);
+
+      fetchDevices(1, "", "", "");
+
+      setTimeout(() => {
+        devicesTableRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }, 150);
+
+      window.history.replaceState(
+        {},
+        document.title,
+        window.location.pathname
+      );
+    } else {
+      fetchDevices(1, search, statusFilter);
+    }
+
     fetchDeviceSummary();
+    fetchDeviceCategories();
   }, []);
+
+  useEffect(() => {
+    if (!dashboardHighlight) {
+      return;
+    }
+
+    const handleFirstClick = () => {
+      setDashboardHighlight(false);
+    };
+
+    document.addEventListener("click", handleFirstClick, {
+      once: true,
+    });
+
+    return () => {
+      document.removeEventListener("click", handleFirstClick);
+    };
+  }, [dashboardHighlight]);
+
+ 
 
   // =========================
   // GET DEVICES
@@ -131,7 +213,7 @@ const unusedDevices = devices.filter(
     const response = await api.get("/devices/", {
       params: {
         page,
-        limit: 20,
+        limit: 90,
         search: searchValue || undefined,
         device_status: statusValue || undefined,
         device_condition: conditionValue || undefined,
@@ -154,18 +236,74 @@ const unusedDevices = devices.filter(
   }
 };
 
+const filteredDevices = useMemo(() => {
+  const value = search.trim().toLowerCase();
+
+  return devices.filter((device) => {
+    const matchesSearch =
+      !value ||
+      device.device_name?.toLowerCase().includes(value);
+
+    const matchesStatus =
+      !statusFilter ||
+      device.device_status === statusFilter;
+
+    const matchesCondition =
+      !deviceConditionFilter ||
+      device.device_condition === deviceConditionFilter;
+
+    return (
+      matchesSearch &&
+      matchesStatus &&
+      matchesCondition
+    );
+  });
+}, [
+  devices,
+  search,
+  statusFilter,
+  deviceConditionFilter,
+]);
+
+const fetchDeviceCategories = async () => {
+  try {
+    const response = await api.get("/device-categories/", {
+      params: {
+        page: 1,
+        limit: 1000, // load all categories for dropdowns
+      },
+    });
+
+    setDeviceCategories(
+      Array.isArray(response.data.data)
+        ? response.data.data
+        : []
+    );
+  } catch (err) {
+    console.error("Failed to load device categories:", err);
+  }
+};
+
+
+
+
   // =========================
   // FORM INPUT
   // =========================
 
   const handleChange = (event) => {
-    const { name, value } = event.target;
+  const { name, value } = event.target;
 
-    setFormData((previous) => ({
-      ...previous,
-      [name]: name === "port" ? Number(value) : value,
-    }));
-  };
+  setFormData((previous) => ({
+    ...previous,
+    [name]:
+      name === "port" || name === "password_rotation_days"
+        ? value === ""
+          ? null
+          : Number(value)
+        : value,
+  }));
+};
 
   // =========================
   // CREATE DEVICE
@@ -219,6 +357,8 @@ const unusedDevices = devices.filter(
       connection_type: device.connection_type,
       username: device.username,
       password: "",
+      device_category_id: device.device_category_id,
+      password_rotation_days: device.password_rotation_days ?? "",
       comments: device.comments || "",
       device_status: device.device_status,
       device_condition: device.device_condition || "Unused",
@@ -248,17 +388,26 @@ const unusedDevices = devices.filter(
       resetForm();
       await fetchDevices();
       await fetchDeviceSummary();
-    } catch (err) {
-      console.error(err);
+     } catch (err) {
+        console.error(err);
 
-      setError(
-        err.response?.data?.detail ||
-        "Failed to update device"
-      );
-    } finally {
-      setSaving(false);
-    }
-  };
+        const detail = err.response?.data?.detail;
+
+        if (Array.isArray(detail)) {
+          setError(
+            detail
+              .map((item) => item.msg || "Validation error")
+              .join(", ")
+          );
+        } else {
+          setError(detail || "Failed to update device");
+        }
+
+      } finally {
+        setSaving(false);
+      }
+};
+  
 
   const handleViewDevice = async (deviceId) => {
   try {
@@ -320,6 +469,8 @@ const unusedDevices = devices.filter(
     connection_type: "SSH",
     username: "",
     password: "",
+    device_category_id: "",
+    password_rotation_days: "",
     comments: "",
     device_status: "Active",
     device_condition: "Unused",
@@ -344,7 +495,8 @@ const unusedDevices = devices.filter(
       connection_type: "SSH",
       username: "",
       password: "",
-    
+      device_category_id: "",
+      password_rotation_days: "",
       comments: "",
       device_status: "Active",
       device_condition: "Unused",
@@ -440,6 +592,33 @@ const deviceViewModal = viewingDevice && (
          </div>
         </div>
 
+                  <div className="form-group">
+            <label>Device Category</label>
+            <div className="view-value">
+              {deviceCategories.find(
+                (category) =>
+                  String(category.id) ===
+                  String(viewingDevice.device_category_id)
+              )?.category_name || "—"}
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label>Password Rotation Days</label>
+            <div className="view-value">
+              {viewingDevice.password_rotation_days
+                ? `${viewingDevice.password_rotation_days} Days`
+                : `${
+                    deviceCategories.find(
+                   (category) =>
+                   String(category.id) ===
+                   String(viewingDevice.device_category_id)
+                 )?.default_rotation_days ?? "—"
+                } Days`}
+            </div>
+          </div>
+
+
         <div className="form-group">
           <label>Status</label>
           <div className="view-value">
@@ -477,6 +656,251 @@ const deviceViewModal = viewingDevice && (
     </div>
   </div>
 );
+ 
+// ========
+// CHANGE PASSWORD MODAL 
+//
+
+
+const changePasswordModal = changingPasswordDevice && (
+  <div
+    className="modal-overlay"
+    onClick={() => {
+      if (!changingPassword) {
+        setChangingPasswordDevice(null);
+      }
+    }}
+  >
+    <div
+      className="form-modal"
+      onClick={(event) => event.stopPropagation()}
+    >
+      <div className="modal-header">
+        <div>
+          <h2>Change Password</h2>
+          <p>
+            Update password for{" "}
+            {changingPasswordDevice.device_name}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          className="modal-close"
+          onClick={() => setChangingPasswordDevice(null)}
+          disabled={changingPassword}
+        >
+          ×
+        </button>
+      </div>
+
+      <form
+        onSubmit={async (event) => {
+          event.preventDefault();
+
+          if (!currentPassword) {
+            setError("Please enter the current password.");
+            return;
+          }
+
+          if (!newPassword) {
+            setError("Please enter a new password.");
+            return;
+          }
+
+          if (newPassword !== confirmNewPassword) {
+            setError("Passwords do not match.");
+            return;
+          }
+
+          try {
+            setChangingPassword(true);
+            setError("");
+
+            await api.patch(
+              `/devices/${changingPasswordDevice.id}/password`,
+              {
+                current_password: currentPassword,
+                new_password: newPassword,
+              }
+            );
+
+            setSuccess("Password changed successfully.");
+
+            setChangingPasswordDevice(null);
+            setCurrentPassword("");
+            setNewPassword("");
+            setConfirmNewPassword("");
+
+            setShowCurrentPassword(false);
+            setShowNewPassword(false);
+            setShowConfirmNewPassword(false);
+          } catch (err) {
+            console.error(err);
+
+            setError(
+              err.response?.data?.detail ||
+                "Failed to change device password"
+            );
+          } finally {
+            setChangingPassword(false);
+          }
+        }}
+      >
+        <div className="view-modal-body">
+          <div className="form-grid">
+
+            {/* CURRENT PASSWORD */}
+            <div className="form-group full-width">
+              <label>Current Password</label>
+
+              <div className="password-input-wrapper">
+                <input
+                  type={
+                    showCurrentPassword
+                      ? "text"
+                      : "password"
+                  }
+                  value={currentPassword}
+                  onChange={(event) =>
+                    setCurrentPassword(event.target.value)
+                  }
+                  required
+                  autoComplete="current-password"
+                />
+
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() =>
+                    setShowCurrentPassword(
+                      (previous) => !previous
+                    )
+                  }
+                >
+                  {showCurrentPassword ? (
+                    <EyeOff size={18} />
+                  ) : (
+                    <Eye size={18} />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* NEW PASSWORD */}
+            <div className="form-group full-width">
+              <label>New Password</label>
+
+              <div className="password-input-wrapper">
+                <input
+                  type={
+                    showNewPassword
+                      ? "text"
+                      : "password"
+                  }
+                  value={newPassword}
+                  onChange={(event) =>
+                    setNewPassword(event.target.value)
+                  }
+                  required
+                  autoComplete="new-password"
+                />
+
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() =>
+                    setShowNewPassword(
+                      (previous) => !previous
+                    )
+                  }
+                >
+                  {showNewPassword ? (
+                    <EyeOff size={18} />
+                  ) : (
+                    <Eye size={18} />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* CONFIRM NEW PASSWORD */}
+            <div className="form-group full-width">
+              <label>Confirm New Password</label>
+
+              <div className="password-input-wrapper">
+                <input
+                  type={
+                    showConfirmNewPassword
+                      ? "text"
+                      : "password"
+                  }
+                  value={confirmNewPassword}
+                  onChange={(event) =>
+                    setConfirmNewPassword(
+                      event.target.value
+                    )
+                  }
+                  required
+                  autoComplete="new-password"
+                />
+
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() =>
+                    setShowConfirmNewPassword(
+                      (previous) => !previous
+                    )
+                  }
+                >
+                  {showConfirmNewPassword ? (
+                    <EyeOff size={18} />
+                  ) : (
+                    <Eye size={18} />
+                  )}
+                </button>
+              </div>
+
+              {confirmNewPassword &&
+                newPassword !== confirmNewPassword && (
+                  <small className="password-error">
+                    Passwords do not match.
+                  </small>
+                )}
+            </div>
+
+          </div>
+        </div>
+
+        <div className="modal-footer">
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() =>
+              setChangingPasswordDevice(null)
+            }
+            disabled={changingPassword}
+          >
+            Cancel
+          </button>
+
+          <button
+            type="submit"
+            className="primary-button"
+            disabled={changingPassword}
+          >
+            {changingPassword
+              ? "Changing..."
+              : "Change Password"}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+);
+
+
 
   // =========================
   // PAGE
@@ -570,25 +994,30 @@ const deviceViewModal = viewingDevice && (
         </div>
       )}
       
-      {/* FORM */}
 
-      {showForm && (
-        <DeviceForm
-          formData={formData}
-          editingDevice={editingDevice}
-          saving={saving}
-          onChange={handleChange}
-          onSubmit={
-            editingDevice
-              ? handleUpdate
-              : handleCreate
-          }
-          onCancel={resetForm}
-          confirmPassword={confirmPassword}
-          setConfirmPassword={setConfirmPassword}
-        />
-      )}
 
+   {/* FORM */}
+
+{showForm && (
+  <DeviceForm
+    formData={formData}
+    editingDevice={editingDevice}
+    saving={saving}
+    onChange={handleChange}
+    onSubmit={
+      editingDevice
+        ? handleUpdate
+        : handleCreate
+    }
+    onCancel={resetForm}
+    confirmPassword={confirmPassword}
+    setConfirmPassword={setConfirmPassword}
+    deviceCategories={deviceCategories}
+  />
+)}
+
+
+<div className="app-content-card">
       {/* FILTERS */}
 
 <SearchFilterBar
@@ -621,57 +1050,54 @@ const deviceViewModal = viewingDevice && (
       ],
     },
   ]}
-  onSearch={() => fetchDevices(1)}
+  onSearch={() => fetchDevices(1,"","","")}
   onClear={() => {
     setSearch("");
     setStatusFilter("");
     setDeviceConditionFilter("");
-    fetchDevices(1, "", "");
+    fetchDevices(1, "", "","");
   }}
 />
 
 
       {/* DEVICE LIST */}
 
-      <DeviceList
-        devices={devices}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        onView={(device) => handleViewDevice(device.id)}
-          
-      />
+      <div
+        ref={devicesTableRef}
+        className={
+          dashboardHighlight
+            ? "dashboard-table-highlight"
+            : ""
+        }
+      >
+        <DeviceList
+          devices={filteredDevices}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onView={(device) => handleViewDevice(device.id)}
+          onChangePassword={handleChangePassword}
+        />
+      </div>
 
       {/* PAGINATION */}
 
-<div className="pagination-controls">
-
-  <button
-    type="button"
-    onClick={() =>
-      fetchDevices(currentPage - 1)
-    }
-    disabled={!pagination.has_previous}
-  >
-    Previous
-  </button>
-
-  <span>
-    Page {pagination.page} of {pagination.total_pages}
-  </span>
-
-  <button
-    type="button"
-    onClick={() =>
-      fetchDevices(currentPage + 1)
-    }
-    disabled={!pagination.has_next}
-  >
-    Next
-  </button>
+<div className="app-pagination-card">
+  <Pagination
+    currentPage={pagination.page}
+    totalPages={pagination.total_pages}
+    totalItems={pagination.total}
+    itemsPerPage={pagination.limit}
+    onPageChange={fetchDevices}
+  />
+</div>
 
 </div>
+
 {viewingDevice &&
   createPortal(deviceViewModal, document.body)}
+
+{changingPasswordDevice &&
+  createPortal(changePasswordModal, document.body)}
 
     </div>
   );

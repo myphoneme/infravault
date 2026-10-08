@@ -23,6 +23,7 @@ const DataTable = ({
             <tr>
               {columns.map((column) => (
                 <th key={column.key}>{column.label}</th>
+                
               ))}
             </tr>
           </thead>
@@ -31,7 +32,7 @@ const DataTable = ({
             {data.map((row) => (
               <tr key={row[rowKey]}>
                 {columns.map((column) => (
-                  <td key={column.key}>
+                  <td key={column.key} >
                     {renderCell
                       ? renderCell(row, column)
                       : row[column.key]}

@@ -1,4 +1,5 @@
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate, useLocation } from "react-router-dom";
+import {useState} from "react";
 
 function DashboardIcon() {
   return (
@@ -24,6 +25,28 @@ function DevicesIcon() {
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <rect x="3" y="4" width="18" height="13" rx="2" />
       <path d="M8 21h8M12 17v4" />
+    </svg>
+  );
+}
+
+
+function ImportExcelIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M5 3h10l4 4v14H5z" />
+      <path d="M15 3v5h4" />
+      <path d="M8 11l5 7M13 11l-5 7" />
+    </svg>
+  );
+}
+
+function DeviceCategoriesIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M4 6h16M4 12h16M4 18h16" />
+      <circle cx="8" cy="6" r="1.5" />
+      <circle cx="16" cy="12" r="1.5" />
+      <circle cx="10" cy="18" r="1.5" />
     </svg>
   );
 }
@@ -58,6 +81,15 @@ function LogoutIcon() {
 
 function Sidebar() {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const isDevicesRoute =
+    location.pathname === "/devices" ||
+    location.pathname.startsWith("/devices/");
+
+  const [devicesOpen, setDevicesOpen] = useState(isDevicesRoute);
+
+  const isDevicesExpanded = isDevicesRoute || devicesOpen;
 
   const handleLogout = () => {
     localStorage.removeItem("access_token");
@@ -89,10 +121,50 @@ function Sidebar() {
           <span>Projects</span>
         </NavLink>
 
-        <NavLink to="/devices">
-          <DevicesIcon />
-          <span>Devices</span>
+          
+        <div className="sidebar-devices-group">
+          <button
+            type="button"
+            className="sidebar-devices-toggle"
+            onClick={() => setDevicesOpen((prev) => !prev)}
+            aria-expanded={isDevicesExpanded}
+          >
+            <DevicesIcon />
+            <span>Devices</span>
+
+            <svg
+              className={`sidebar-devices-chevron ${
+                isDevicesExpanded ? "open" : ""
+              }`}
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </button>
+
+          {isDevicesExpanded && (
+            <div className="sidebar-devices-submenu">
+              <NavLink to="/devices" end>
+                <DevicesIcon />
+                <span>Device Management</span>
+              </NavLink>
+
+              <NavLink to="/devices/import">
+                <ImportExcelIcon />
+                <span>Import Excel</span>
+              </NavLink>
+            </div>
+          )}
+        </div>
+
+
+
+        <NavLink to="/device-categories">
+          <DeviceCategoriesIcon />
+          <span>Device Categories</span>
         </NavLink>
+
 
         <NavLink to="/users">
           <UsersIcon />

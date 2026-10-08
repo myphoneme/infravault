@@ -1,0 +1,261 @@
+/* =========================
+   VIEW MODAL
+========================= */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 99999;
+}
+
+.device-modal {
+  width: 100%;
+  max-width: 760px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+/* =========================
+   MODAL HEADER
+========================= */
+
+.device-modal .modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 22px 24px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.device-modal .modal-header > div {
+  flex: 1;
+}
+
+.device-modal .modal-header h2 {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.3;
+}
+
+.device-modal .modal-header p {
+  margin: 6px 0 0;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.device-modal .modal-close {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #6b7280;
+  font-size: 26px;
+  line-height: 36px;
+  cursor: pointer;
+}
+
+.device-modal .modal-close:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+/* =========================
+   MODAL FOOTER
+========================= */
+
+.device-modal .modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.device-modal .modal-footer button {
+  min-width: 110px;
+}
+
+/* =========================
+   BUTTONS
+========================= */
+
+.device-modal .primary-button {
+  border: none;
+  background: #ff7600;
+  color: white;
+  padding: 10px 18px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.device-modal .primary-button:hover {
+  background: #ff7600;
+}
+
+.device-modal .primary-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.device-modal .secondary-button {
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #374151;
+  padding: 10px 18px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.device-modal .secondary-button:hover {
+  background: #f3f4f6;
+}
+
+.device-modal .secondary-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* =========================
+   VIEW VALUES
+========================= */
+
+.device-modal .view-value {
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #111827;
+  font-size: 14px;
+  font-family: inherit;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+}
+
+.device-modal .view-value.multiline {
+  align-items: flex-start;
+  min-height: 72px;
+  white-space: pre-wrap;
+}
+
+.device-modal .view-modal-body {
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+/* =========================
+   VIEW FORM GRID
+========================= */
+
+.device-modal .form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px;
+}
+
+.device-modal .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.device-modal .form-group label {
+  font-weight: 600;
+}
+
+.device-modal .full-width {
+  grid-column: 1 / -1;
+}
+
+/* =========================
+   MOBILE
+========================= */
+
+@media (max-width: 650px) {
+  .modal-overlay {
+    padding: 12px;
+  }
+
+  .device-modal {
+    max-height: 95vh;
+  }
+
+  .device-modal .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .device-modal .full-width {
+    grid-column: auto;
+  }
+
+  .device-modal .modal-footer {
+    flex-direction: column-reverse;
+  }
+
+  .device-modal .modal-footer button {
+    width: 100%;
+  }
+}
+
+
+
+/* ==========================================
+   Dashboard Notification + Record Modal
+   Preserve existing modal styles
+========================================== */
+
+/* Keep the notification overlay below the record modal */
+.notification-overlay {
+  z-index: 1000;
+}
+
+/* Record modal appears above the notification */
+.modal-overlay.notification-record-modal {
+  z-index: 1100;
+
+  background: transparent;
+
+  /* Position the record modal to the right */
+  justify-content: center;
+  padding-left: 420px;
+  padding-right: 24px;
+}
+
+/* Keep the existing record modal appearance */
+.modal-overlay.notification-record-modal .device-modal {
+  width: 100%;
+  max-width: 760px;
+  max-height: 90vh;
+}
+
+/* Smaller screens: stack instead of forcing overlap */
+@media (max-width: 900px) {
+  .modal-overlay.notification-record-modal {
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.35);
+  }
+
+  .modal-overlay.notification-record-modal .device-modal {
+    max-width: 100%;
+    max-height: 95vh;
+  }
+}

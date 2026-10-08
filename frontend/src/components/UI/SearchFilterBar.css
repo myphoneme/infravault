@@ -157,3 +157,31 @@
     flex: 1 1 auto;
   }
 }
+
+.searchable-select-trigger {
+
+  width: 100%;
+
+  min-height: 42px;
+
+  padding: 10px 12px;
+
+  border: 1px solid #d1d5db;
+
+  border-radius: 8px;
+
+  background: #ffffff;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  text-align: left;
+
+  font-size: 14px;
+
+  cursor: pointer;
+
+}

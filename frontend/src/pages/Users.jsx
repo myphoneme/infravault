@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   UsersRound,
   UserRoundCheck,
@@ -14,6 +14,9 @@ import SummaryCards from "../components/UI/SummaryCards";
 import SearchFilterBar from "../components/UI/SearchFilterBar";
 import DataTable from "../components/UI/DataTable";
 import PageHeader from "../components/UI/PageHeader";
+import ActionButtons from "../components/UI/ActionButtons";
+import FormModal from "../components/UI/FormModal";
+import Pagination from "../components/UI/Pagination";
 
 function Users() {
   const [users, setUsers] = useState([]);
@@ -77,7 +80,7 @@ function Users() {
 
       const params = {
         page: page,
-        limit: 20,
+        limit: 90,
       };
 
       if (filters.search.trim()) {
@@ -112,6 +115,28 @@ function Users() {
     }
   };
 
+
+  const filteredUsers = useMemo(() => {
+  const value = search.trim().toLowerCase();
+
+  return users.filter((user) => {
+    const matchesSearch =
+      !value ||
+      user.name?.toLowerCase().includes(value) ||
+      user.email?.toLowerCase().includes(value);
+
+    const matchesRole =
+      !roleFilter || user.role === roleFilter;
+
+    const matchesStatus =
+      !statusFilter ||
+      (statusFilter === "active" && user.is_active) ||
+      (statusFilter === "inactive" && !user.is_active);
+
+    return matchesSearch && matchesRole && matchesStatus;
+  });
+}, [users, search, roleFilter, statusFilter]);
+
   /*
    * ---------------------------------------------------------
    * LOAD USER SUMMARY
@@ -138,9 +163,14 @@ function Users() {
    */
 
   useEffect(() => {
-    loadUsers(1);
+    loadUsers();
     loadUserSummary();
   }, []);
+
+
+
+
+
 
   /*
    * ---------------------------------------------------------
@@ -452,254 +482,191 @@ function Users() {
       {/* =====================================================
           USER FORM MODAL
       ====================================================== */}
+{showForm && (
+  <FormModal
+    title={editingUser ? "Edit User" : "Add User"}
+    subtitle={
+      editingUser
+        ? "Update user information"
+        : "Create a new InfraVault user"
+    }
+    onClose={resetForm}
+    onSubmit={handleSubmit}
+    submitText={
+      editingUser
+        ? "Update User"
+        : "Create User"
+    }
+  >
+    <div className="form-grid">
 
-      {showForm && (
-        <div className="modal-overlay">
+      {/* NAME */}
 
-          <div className="user-modal">
+      <div className="form-group">
+        <label htmlFor="name">
+          Name
+        </label>
 
-            <div className="modal-header">
+        <input
+          id="name"
+          name="name"
+          value={formData.name}
+          onChange={handleChange}
+          required
+        />
+      </div>
 
-              <div>
+      {/* EMAIL */}
 
-                <h2>
-                  {editingUser
-                    ? "Edit User"
-                    : "Add User"}
-                </h2>
+      <div className="form-group">
+        <label htmlFor="email">
+          Email
+        </label>
 
-                <p>
-                  {editingUser
-                    ? "Update user information"
-                    : "Create a new InfraVault user"}
-                </p>
+        <input
+          id="email"
+          type="email"
+          name="email"
+          value={formData.email}
+          onChange={handleChange}
+          required
+        />
+      </div>
 
-              </div>
+      {/* PASSWORD */}
 
-              <button
-                type="button"
-                className="modal-close"
-                onClick={resetForm}
-              >
-                ×
-              </button>
+      <div className="form-group">
+        <label htmlFor="password">
+          Password
+        </label>
 
-            </div>
+        <div className="password-input-wrapper">
+          <input
+            id="password"
+            type={
+              showPassword
+                ? "text"
+                : "password"
+            }
+            name="password"
+            value={formData.password}
+            onChange={handleChange}
+            placeholder={
+              editingUser
+                ? "Enter new password"
+                : "Enter password"
+            }
+            required={!editingUser}
+          />
 
-            <form onSubmit={handleSubmit}>
-
-              <div className="form-grid">
-
-                {/* NAME */}
-
-                <div className="form-group">
-
-                  <label htmlFor="name">
-                    Name
-                  </label>
-
-                  <input
-                    id="name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    required
-                  />
-
-                </div>
-
-                {/* EMAIL */}
-
-                <div className="form-group">
-
-                  <label htmlFor="email">
-                    Email
-                  </label>
-
-                  <input
-                    id="email"
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    required
-                  />
-
-                </div>
-
-                {/* PASSWORD */}
-
-                <div className="form-group">
-
-                  <label htmlFor="password">
-                    Password
-                  </label>
-
-                  <div className="password-input-wrapper">
-
-                    <input
-                      id="password"
-                      type={
-                        showPassword
-                          ? "text"
-                          : "password"
-                      }
-                      name="password"
-                      value={formData.password}
-                      onChange={handleChange}
-                      placeholder={
-                        editingUser
-                          ? "Enter new password"
-                          : "Enter password"
-                      }
-                      required={!editingUser}
-                    />
-
-                    <button
-                      type="button"
-                      className="password-toggle"
-                      onClick={() =>
-                        setShowPassword(
-                          (previous) =>
-                            !previous
-                        )
-                      }
-                      aria-label={
-                        showPassword
-                          ? "Hide password"
-                          : "Show password"
-                      }
-                    >
-                      {showPassword ? (
-                        <EyeOff size={20} />
-                      ) : (
-                        <Eye size={20} />
-                      )}
-                    </button>
-
-                  </div>
-
-                </div>
-
-                {/* CONFIRM PASSWORD */}
-
-                <div className="form-group">
-
-                  <label htmlFor="confirmPassword">
-                    Confirm Password
-                  </label>
-
-                  <div className="password-input-wrapper">
-
-                    <input
-                      id="confirmPassword"
-                      type={
-                        showConfirmPassword
-                          ? "text"
-                          : "password"
-                      }
-                      value={confirmPassword}
-                      onChange={(event) =>
-                        setConfirmPassword(
-                          event.target.value
-                        )
-                      }
-                      placeholder={
-                        editingUser
-                          ? "Confirm new password"
-                          : "Confirm password"
-                      }
-                      required={!editingUser}
-                    />
-
-                    <button
-                      type="button"
-                      className="password-toggle"
-                      onClick={() =>
-                        setShowConfirmPassword(
-                          (previous) =>
-                            !previous
-                        )
-                      }
-                      aria-label={
-                        showConfirmPassword
-                          ? "Hide confirm password"
-                          : "Show confirm password"
-                      }
-                    >
-                      {showConfirmPassword ? (
-                        <EyeOff size={20} />
-                      ) : (
-                        <Eye size={20} />
-                      )}
-                    </button>
-
-                  </div>
-
-                </div>
-
-                {/* ROLE */}
-
-                <div className="form-group">
-
-                  <label htmlFor="role">
-                    Role
-                  </label>
-
-                  <select
-                    id="role"
-                    name="role"
-                    value={formData.role}
-                    onChange={handleChange}
-                  >
-
-                    <option value="USER">
-                      USER
-                    </option>
-
-                    <option value="ADMIN">
-                      ADMIN
-                    </option>
-
-                    <option value="SUPER_ADMIN">
-                      SUPER_ADMIN
-                    </option>
-
-                  </select>
-
-                </div>
-
-              </div>
-
-              {/* MODAL FOOTER */}
-
-              <div className="modal-footer">
-
-                <button
-                  type="button"
-                  className="secondary-button"
-                  onClick={resetForm}
-                >
-                  Cancel
-                </button>
-
-                <button
-                  type="submit"
-                  className="primary-button"
-                >
-                  {editingUser
-                    ? "Update User"
-                    : "Create User"}
-                </button>
-
-              </div>
-
-            </form>
-
-          </div>
-
+          <button
+            type="button"
+            className="password-toggle"
+            onClick={() =>
+              setShowPassword(
+                (previous) => !previous
+              )
+            }
+            aria-label={
+              showPassword
+                ? "Hide password"
+                : "Show password"
+            }
+          >
+            {showPassword ? (
+              <EyeOff size={20} />
+            ) : (
+              <Eye size={20} />
+            )}
+          </button>
         </div>
-      )}
+      </div>
+
+      {/* CONFIRM PASSWORD */}
+
+      <div className="form-group">
+        <label htmlFor="confirmPassword">
+          Confirm Password
+        </label>
+
+        <div className="password-input-wrapper">
+          <input
+            id="confirmPassword"
+            type={
+              showConfirmPassword
+                ? "text"
+                : "password"
+            }
+            value={confirmPassword}
+            onChange={(event) =>
+              setConfirmPassword(
+                event.target.value
+              )
+            }
+            placeholder={
+              editingUser
+                ? "Confirm new password"
+                : "Confirm password"
+            }
+            required={!editingUser}
+          />
+
+          <button
+            type="button"
+            className="password-toggle"
+            onClick={() =>
+              setShowConfirmPassword(
+                (previous) => !previous
+              )
+            }
+            aria-label={
+              showConfirmPassword
+                ? "Hide confirm password"
+                : "Show confirm password"
+            }
+          >
+            {showConfirmPassword ? (
+              <EyeOff size={20} />
+            ) : (
+              <Eye size={20} />
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* ROLE */}
+
+      <div className="form-group">
+        <label htmlFor="role">
+          Role
+        </label>
+
+        <select
+          id="role"
+          name="role"
+          value={formData.role}
+          onChange={handleChange}
+        >
+          <option value="USER">
+            USER
+          </option>
+
+          <option value="ADMIN">
+            ADMIN
+          </option>
+
+          <option value="SUPER_ADMIN">
+            SUPER_ADMIN
+          </option>
+        </select>
+      </div>
+
+    </div>
+  </FormModal>
+)}
+      
+        
+    
 
       {/* =====================================================
           LOADING
@@ -719,7 +686,7 @@ function Users() {
 {/* =================================================
     SEARCH & FILTER BAR
 ================================================== */}
-
+<div className="app-content-card">
 
      <SearchFilterBar
   search={{
@@ -750,7 +717,7 @@ function Users() {
       ],
     },
   ]}
-  onSearch={handleSearch}
+  onSearch={()=>{}}
   onClear={handleClearFilters}
 />
 
@@ -767,7 +734,7 @@ function Users() {
     { key: "status", label: "Status" },
     { key: "actions", label: "Actions" },
   ]}
-  data={users}
+  data={filteredUsers}
   emptyMessage="No users found."
   renderCell={(user, column) => {
     if (column.key === "status") {
@@ -784,35 +751,23 @@ function Users() {
       );
     }
 
-    if (column.key === "actions") {
-      return (
-        <div className="action-buttons">
-
-          <button
-            type="button"
-            className="edit-button"
-            onClick={() => handleEdit(user)}
-          >
-            Edit
-          </button>
-
-          <button
-            type="button"
-            className={
-              user.is_active
-                ? "deactivate-button"
-                : "activate-button"
-            }
-            onClick={() => handleStatusChange(user)}
-          >
-            {user.is_active
-              ? "Deactivate"
-              : "Activate"}
-          </button>
-
-        </div>
-      );
-    }
+if (column.key === "actions") {
+  return (
+    <ActionButtons
+      onEdit={() => handleEdit(user)}
+      onActivate={
+        !user.is_active
+          ? () => handleStatusChange(user)
+          : undefined
+      }
+      onDeactivate={
+        user.is_active
+          ? () => handleStatusChange(user)
+          : undefined
+      }
+    />
+  );
+}
 
     return user[column.key];
   }}
@@ -823,37 +778,15 @@ function Users() {
               PAGINATION
           ================================================== */}
 
-          <div className="pagination-controls">
-
-            <button
-              type="button"
-              onClick={() =>
-                loadUsers(currentPage - 1)
-              }
-              disabled={
-                !pagination.has_previous
-              }
-            >
-              Previous
-            </button>
-
-            <span>
-              Page {pagination.page} of{" "}
-              {pagination.total_pages}
-            </span>
-
-            <button
-              type="button"
-              onClick={() =>
-                loadUsers(currentPage + 1)
-              }
-              disabled={
-                !pagination.has_next
-              }
-            >
-              Next
-            </button>
-
+          <div className="app-pagination-card">
+            <Pagination
+              currentPage={pagination.page}
+              totalPages={pagination.total_pages}
+              totalItems={pagination.total}
+              itemsPerPage={pagination.limit}
+              onPageChange={loadUsers}
+            />
+          </div>
           </div>
 
         </>

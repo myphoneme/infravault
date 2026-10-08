@@ -1,6 +1,7 @@
 import DataTable from "../../components/UI/DataTable";
+import ActionButtons from "../../components/UI/ActionButtons"
 
-function DeviceList({ devices, onEdit, onDelete, onView }) {
+function DeviceList({ devices, onEdit, onDelete, onView ,onChangePassword}) {
   const columns = [
     { key: "id", label: "ID" },
     { key: "device_name", label: "Device Name" },
@@ -25,10 +26,14 @@ function DeviceList({ devices, onEdit, onDelete, onView }) {
               className={
                 device.device_status === "Active"
                   ? "status-active"
-                  : "status-inactive"
+                  : ""
               }
+              style={{ display: "inline-block", textAlign: "center", minWidth: "60px" }}
+              
             >
-              {device.device_status}
+              {device.device_status==="Inactive"
+              ? "-"
+              : device.device_status}
             </span>
           );
         }
@@ -52,34 +57,15 @@ function DeviceList({ devices, onEdit, onDelete, onView }) {
         }
 
         if (column.key === "actions") {
-          return (
-            <div className="action-buttons">
-              <button
-                type="button"
-                className="view-button"
-                onClick={() => onView(device)}
-              >
-                View
-              </button>
-
-              <button
-                type="button"
-                className="edit-button"
-                onClick={() => onEdit(device)}
-              >
-                Edit
-              </button>
-
-              <button
-                type="button"
-                className="delete-button"
-                onClick={() => onDelete(device.id)}
-              >
-                Delete
-              </button>
-            </div>
-          );
-        }
+  return (
+    <ActionButtons
+      onView={() => onView(device)}
+      onEdit={() => onEdit(device)}
+      onDelete={() => onDelete(device.id)}
+       onChangePassword={() => onChangePassword(device)}
+    />
+  );
+}
 
         return device[column.key];
       }}

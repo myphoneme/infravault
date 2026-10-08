@@ -7,6 +7,9 @@ import {
   YAxis,
   Tooltip,
   Legend,
+  PieChart,
+  Pie,
+  Cell,
 } from "recharts";
 
 const LINE_COLORS = [
@@ -24,9 +27,10 @@ export default function DashboardLineChart({
   icon: Icon,
   data = [],
   lines = [],
-  metrics = [],
   year,
   onYearChange,
+  donutTitle,
+  donutData=[],
 }) {
   return (
     <div className="dashboard-chart-card">
@@ -145,29 +149,82 @@ export default function DashboardLineChart({
                 connectNulls
               />
             ))}
+
+
+           
           </LineChart>
         </ResponsiveContainer>
 
       </div>
 
-      {/* Current Metrics */}
-      {metrics.length > 0 && (
-        <div className="dashboard-overview-metrics">
+       {/* Yearly Donut */}
+            {donutData.length > 0 && (
+              <div className="dashboard-donut-section">
 
-          {metrics.map((metric) => (
-            <div
-              key={metric.label}
-              className={`dashboard-metric-row ${
-                metric.className || ""
-              }`}
-            >
-              <span>{metric.label}</span>
-              <strong>{metric.value}</strong>
-            </div>
-          ))}
+                <div className="dashboard-donut-header">
+                  <h3>{donutTitle}</h3>
+                  <span>{year}</span>
+                </div>
 
-        </div>
-      )}
+                <div className="dashboard-donut-content">
+
+                  <div className="dashboard-donut-chart">
+                    <ResponsiveContainer width="100%" height={190}>
+                      <PieChart>
+                        <Pie
+                          data={donutData}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={55}
+                          outerRadius={78}
+                          paddingAngle={2}
+                          stroke="none"
+                        >
+                          {donutData.map((entry) => (
+                            <Cell
+                              key={entry.name}
+                              fill={entry.color}
+                            />
+                          ))}
+                        </Pie>
+
+                        <Tooltip
+                          contentStyle={{
+                            background: "#ffffff",
+                            border: "1px solid #e5e7eb",
+                            borderRadius: "8px",
+                            boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                          }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  <div className="dashboard-donut-details">
+                    {donutData.map((item) => (
+                      <div
+                        key={item.name}
+                        className="dashboard-donut-row"
+                      >
+                        <div className="dashboard-donut-label">
+                          <span
+                            className="dashboard-donut-dot"
+                            style={{ backgroundColor: item.color }}
+                          />
+
+                          <span>{item.name}</span>
+                        </div>
+
+                        <strong>{item.value}</strong>
+                      </div>
+                    ))}
+                  </div>
+
+                </div>
+              </div>
+            )}
 
     </div>
   );

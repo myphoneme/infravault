@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect,useRef, useMemo,useState } from "react";
 import { createPortal } from "react-dom";
 import api from "../api/axios";
 
@@ -6,6 +6,7 @@ import SummaryCard from "../components/UI/SummaryCard";
 import SummaryCards from "../components/UI/SummaryCards";
 import SearchFilterBar from "../components/UI/SearchFilterBar";
 import PageHeader from "../components/UI/PageHeader";
+import Pagination from "../components/UI/Pagination";
 
 import ProjectList from "./Projects/ProjectList";
 import ProjectForm from "./Projects/ProjectForm";
@@ -21,7 +22,8 @@ import {
 
 function Projects() {
 
-
+  
+  
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -34,7 +36,12 @@ function Projects() {
   const [usersLoading, setUsersLoading] = useState(false);
   const [currentAssignedUser, setCurrentAssignedUser] = useState(null);
   const [allUsers, setAllUsers] = useState([]);
-  const [allUsersLoading, setAllUsersLoading] = useState(false);
+  const [allUsersLoading, setAllUsersLoading] = useState(false)
+
+  const [dashboardHighlight, setDashboardHighlight] =
+  useState(false);
+
+  const projectsTableRef = useRef(null);
   
 
   const [projectSummary, setProjectSummary] = useState({
@@ -54,12 +61,18 @@ const [pagination, setPagination] = useState({
 });
 
 const [search, setSearch] = useState("");
-const [statusFilter, setStatusFilter] = useState("");
+const [statusFilter, setStatusFilter] = useState();
 const [saving, setSaving] = useState(false);
 const [showForm, setShowForm] = useState(false);
 const [editingProject, setEditingProject] = useState(null);
 
 const [devices, setDevices] = useState([]);
+
+const initialDashboardParams = new URLSearchParams(
+  window.location.search
+);
+const initialDashboardMode =
+  initialDashboardParams.get("dashboard") === "true";
 
 const [formData, setFormData] = useState({
   project_name: "",
@@ -75,14 +88,78 @@ const [formData, setFormData] = useState({
   project_status: "Pending",
 });
 
+useEffect(() => {
+  const params = new URLSearchParams(
+    window.location.search
+  );
+
+  const dashboardFilter = params.get("status") || "";
+  const dashboardMode =
+    params.get("dashboard") === "true";
+
+  if (!dashboardMode) {
+    return;
+  }
+
+  setStatusFilter(dashboardFilter);
+  setDashboardHighlight(true);
+
+  fetchProjects(1, "", dashboardFilter);
+
+  setTimeout(() => {
+    projectsTableRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, 150);
+
+  window.history.replaceState(
+    {},
+    document.title,
+    window.location.pathname
+  );
+}, []);
+
+
+
+useEffect(() => {
+  if (!dashboardHighlight) {
+    return;
+  }
+
+  const handleFirstClick = () => {
+    setDashboardHighlight(false);
+  };
+
+  document.addEventListener("click", handleFirstClick, {
+    once: true,
+  });
+
+  return () => {
+    document.removeEventListener("click", handleFirstClick);
+  };
+}, [dashboardHighlight]);
+
+
+
+
+
   useEffect(() => {
-    fetchProjects();
+    if (!initialDashboardMode) {
+      fetchProjects(1, search, statusFilter);
+    }
+
     fetchDevices();
     loadProjectSummary();
     loadUsers();
     loadAllUsers();
   }, []);
 
+
+
+
+
+  
   const fetchProjects = async (
   page = 1,
   searchValue = search,
@@ -95,12 +172,13 @@ const [formData, setFormData] = useState({
     const response = await api.get("/projects/", {
       params: {
         page,
-        limit: 20,
+        limit: 90,
         search: searchValue || undefined,
         project_status: statusValue || undefined,
       },
     });
 
+   
     setProjects(response.data.data);
     setPagination(response.data.pagination);
     setCurrentPage(page);
@@ -117,6 +195,24 @@ const [formData, setFormData] = useState({
   }
 };
 
+
+const filteredProjects = useMemo(() => {
+  const value = search.trim().toLowerCase();
+
+  return projects.filter((project) => {
+    const matchesSearch =
+      !value ||
+      project.project_name
+        ?.toLowerCase()
+        .includes(value);
+
+    const matchesStatus =
+      !statusFilter ||
+      project.project_status === statusFilter;
+
+    return matchesSearch && matchesStatus;
+  });
+}, [projects, search, statusFilter]);
 
 const loadProjectSummary = async () => {
   try {
@@ -205,6 +301,9 @@ const loadAssignedUser = async (userId) => {
     );
   }
 };
+
+
+
 
 const handleChange = (event) => {
   const { name, value } = event.target;
@@ -725,7 +824,7 @@ const projectViewModal = viewingProject && (
 </SummaryCards>
 
 
-
+<div className="app-content-card">
 {/* FILTERS */}
 
 <SearchFilterBar
@@ -747,7 +846,7 @@ const projectViewModal = viewingProject && (
       ],
     },
   ]}
-  onSearch={() => fetchProjects(1)}
+  onSearch={() => fetchProjects(1,"","")}
   onClear={() => {
     setSearch("");
     setStatusFilter("");
@@ -756,37 +855,36 @@ const projectViewModal = viewingProject && (
 />
 
 
+<div
+  ref={projectsTableRef}
+  className={
+    dashboardHighlight
+      ? "dashboard-table-highlight"
+      : ""
+  }
+>
+  <ProjectList
+    projects={filteredProjects}
+    allUsers={allUsers}
+    onView={handleView}
+    onEdit={handleEdit}
+    onDelete={handleDelete}
+  />
+</div>
 
-     <ProjectList
-  projects={projects}
-  onView={handleView}
-  onEdit={handleEdit}
-  onDelete={handleDelete}
-/>
+{/* =====================================================
+    PAGINATION
+===================================================== */} 
 
-      {/* PAGINATION */}
-
-<div className="pagination-controls">
-
-  <button
-    type="button"
-    onClick={() => fetchProjects(currentPage - 1)}
-    disabled={!pagination.has_previous}
-  >
-    Previous
-  </button>
-
-  <span>
-    Page {pagination.page} of {pagination.total_pages}
-  </span>
-
-  <button
-    type="button"
-    onClick={() => fetchProjects(currentPage + 1)}
-    disabled={!pagination.has_next}
-  >
-    Next
-  </button>
+ <div className="app-pagination-card">
+  <Pagination
+    currentPage={pagination.page}
+    totalPages={pagination.total_pages}
+    totalItems={pagination.total}
+    itemsPerPage={pagination.limit}
+    onPageChange={fetchProjects}
+  />
+</div>
 
 </div>
 {viewingProject &&

@@ -3,6 +3,7 @@ from datetime import datetime, date
 from typing import Literal
 
 
+
 ProjectStatus = Literal["Pending", "Completed", "Overdue"]
 
 
@@ -68,6 +69,8 @@ class DeviceBase(BaseModel):
     port: int
     connection_type: str
     username: str
+    device_category_id:int
+    password_rotation_days: Literal[90,180,270,360] | None=None
     comments: str | None = None
     device_status: str = "Active"
     device_condition: str = "Unused"
@@ -81,6 +84,7 @@ class DeviceResponse(DeviceBase):
     id: int
     created_at: datetime
     updated_at: datetime
+    password_changed_at: datetime
     created_by: int | None = None
     updated_by: int | None = None
 
@@ -97,9 +101,12 @@ class DeviceListResponse(BaseModel):
     port: int
     connection_type: str
     username: str
+    device_category_id:int
+    password_rotation_days: int | None = None
     comments: str | None = None
     device_status: str
     device_condition: str
+    password_changed_at: datetime
     created_at: datetime
     updated_at: datetime
     created_by: int | None = None
@@ -120,6 +127,37 @@ class DevicePagination(BaseModel):
 class DeviceListResponseWrapper(BaseModel):
     data: list[DeviceListResponse]
     pagination: DevicePagination
+
+
+
+class DeviceCategoryCreate(BaseModel):
+    category_name: str
+    default_rotation_days:Literal[90,180,270,360]
+
+
+class DeviceCategoryUpdate(BaseModel):
+    category_name: str | None = None
+    default_rotation_days:Literal[90,180,270,360] | None = None
+
+class DevicePasswordChange(BaseModel):
+    current_password: str
+    new_password: str
+
+
+class DeviceCategoryResponse(BaseModel):
+    id: int
+    category_name: str
+    default_rotation_days: int
+    created_at: datetime
+    updated_at: datetime
+    created_by: int | None = None
+    updated_by: int | None = None
+
+    class Config:
+        from_attributes = True
+
+
+
 
 
 class ProjectBase(BaseModel):
